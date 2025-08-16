@@ -1,0 +1,16 @@
+# Screenshots directory for Test Manager Portal UI
+# This directory contains actual screenshots of the application:
+# - dashboard.png - Main dashboard with metrics and overview
+# - projects.png - Project management interface
+# - test-cases.png - Test case management table
+# - test-plans.png - Test planning interface
+# - test-runs.png - Test execution tracking
+# - reports.png - Analytics and reporting dashboard
+# - ai-generation.png - AI generation modal
+# - project-modal.png - Project creation/edit modal
+# - test-case-modal.png - Test case creation/edit modal
+# - test-plan-modal.png - Test plan creation modal
+# - test-run-modal.png - Test run configuration modal
+#
+# These screenshots showcase the complete UI of the Test Manager Portal
+# and are referenced in the main README.md file.
