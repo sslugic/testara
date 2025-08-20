@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ApiService from '../services/api';
 import { 
   Plus, 
   Search, 
@@ -20,100 +21,13 @@ import {
 
 const TestManagerPortal = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      name: 'E-commerce Platform',
-      description: 'Testing suite for online shopping platform',
-      status: 'active',
-      testCases: 45,
-      passRate: 87,
-      lastRun: '2024-08-11',
-      team: ['John Doe', 'Jane Smith']
-    },
-    {
-      id: 2,
-      name: 'Mobile Banking App',
-      description: 'Security and functionality testing',
-      status: 'active',
-      testCases: 72,
-      passRate: 93,
-      lastRun: '2024-08-10',
-      team: ['Alice Johnson', 'Bob Wilson']
-    }
-  ]);
-
-  const [testCases, setTestCases] = useState([
-    {
-      id: 1,
-      title: 'User Login Functionality',
-      project: 'E-commerce Platform',
-      priority: 'High',
-      status: 'passed',
-      lastRun: '2024-08-11',
-      steps: 5
-    },
-    {
-      id: 2,
-      title: 'Payment Processing',
-      project: 'E-commerce Platform',
-      priority: 'Critical',
-      status: 'failed',
-      lastRun: '2024-08-11',
-      steps: 8
-    },
-    {
-      id: 3,
-      title: 'Account Balance Display',
-      project: 'Mobile Banking App',
-      priority: 'Medium',
-      status: 'passed',
-      lastRun: '2024-08-10',
-      steps: 3
-    }
-  ]);
-
-  const [testPlans, setTestPlans] = useState([
-    {
-      id: 1,
-      name: 'Q4 Testing Plan',
-      description: 'Comprehensive testing for Q4 release',
-      projectId: 1,
-      testCases: [1, 2],
-      status: 'active',
-      createdDate: '2024-08-01',
-      strategy: {
-        objectives: ['Ensure system stability', 'Validate core functionality'],
-        scope: 'Full regression testing of core features',
-        approach: 'Risk-based testing with automated regression suite',
-        resources: 'QA team of 3 members, automated testing tools',
-        timeline: '2 weeks testing phase',
-        deliverables: ['Test execution report', 'Defect analysis']
-      }
-    }
-  ]);
-
-  const [testRuns, setTestRuns] = useState([
-    {
-      id: 1,
-      name: 'Q4 Testing Plan - Run #1',
-      testPlanId: 1,
-      projectId: 1,
-      status: 'completed',
-      startDate: '2024-08-01',
-      endDate: '2024-08-15',
-      executedBy: 'John Doe',
-      testCaseResults: [
-        { testCaseId: 1, status: 'passed', executedDate: '2024-08-10', notes: 'All validations passed' },
-        { testCaseId: 2, status: 'failed', executedDate: '2024-08-11', notes: 'Payment gateway timeout' }
-      ],
-      totalTests: 2,
-      passedTests: 1,
-      failedTests: 1,
-      skippedTests: 0
-    }
-  ]);
+  const [projects, setProjects] = useState([]);
+  const [testCases, setTestCases] = useState([]);
+  const [testPlans, setTestPlans] = useState([]);
+  const [testRuns, setTestRuns] = useState([]);
 
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiTask, setAiTask] = useState('project');
@@ -125,7 +39,6 @@ const TestManagerPortal = () => {
   const [showTestPlanModal, setShowTestPlanModal] = useState(false);
   const [showTestRunModal, setShowTestRunModal] = useState(false);
 
-  // Add view/edit modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewModalData, setViewModalData] = useState(null);
   const [viewModalType, setViewModalType] = useState('');
@@ -143,7 +56,8 @@ const TestManagerPortal = () => {
     description: '',
     project: '',
     priority: 'Medium',
-    category: 'Functional'
+    category: 'Functional',
+    steps: []
   });
 
   const [testPlanForm, setTestPlanForm] = useState({
@@ -166,18 +80,53 @@ const TestManagerPortal = () => {
     description: '',
     testPlanId: '',
     projectId: '',
-    executedBy: 'Current User'
+    executedBy: 'Current User',
+    testCaseResults: []
   });
 
+  const [showTestExecutionModal, setShowTestExecutionModal] = useState(false);
+  const [executingTestRun, setExecutingTestRun] = useState(null);
+
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const loadAllData = async () => {
+    try {
+      const [projectsData, testCasesData, testPlansData, testRunsData] = await Promise.all([
+        ApiService.getProjects(),
+        ApiService.getTestCases(),
+        ApiService.getTestPlans(),
+        ApiService.getTestRuns()
+      ]);
+
+      setProjects(projectsData || []);
+      setTestCases(testCasesData || []);
+      setTestPlans(testPlansData || []);
+      setTestRuns(testRunsData || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError('Failed to load data: ' + err.message);
+      setProjects([]);
+      setTestCases([]);
+      setTestPlans([]);
+      setTestRuns([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const dashboardStats = {
-    totalProjects: projects.length,
-    totalTestCases: testCases.length,
-    passedTests: testCases.filter(tc => tc.status === 'passed').length,
-    failedTests: testCases.filter(tc => tc.status === 'failed').length,
-    avgPassRate: Math.round(projects.reduce((acc, p) => acc + p.passRate, 0) / projects.length)
+    totalProjects: (projects || []).length,
+    totalTestCases: (testCases || []).length,
+    passedTests: (testCases || []).filter(tc => tc.status === 'passed').length,
+    failedTests: (testCases || []).filter(tc => tc.status === 'failed').length,
+    avgPassRate: (projects || []).length > 0 ? Math.round((projects || []).reduce((acc, p) => acc + (p.passRate || 0), 0) / (projects || []).length) : 0
   };
 
   const StatusBadge = ({ status }) => {
+    const safeStatus = status || 'pending';
     const colors = {
       passed: 'bg-green-100 text-green-800',
       failed: 'bg-red-100 text-red-800',
@@ -189,8 +138,8 @@ const TestManagerPortal = () => {
     };
     
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[safeStatus] || colors.pending}`}>
+        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
       </span>
     );
   };
@@ -222,23 +171,24 @@ const TestManagerPortal = () => {
   };
 
   const handleCreateTestCase = () => {
-    console.log('Create test case clicked'); // Debug log
+    console.log('Create test case clicked');
     setTestCaseForm({
       title: '',
       description: '',
-      project: projects.length > 0 ? projects[0].name : '',
+      project: (projects || []).length > 0 ? (projects || [])[0].name : '',
       priority: 'Medium',
-      category: 'Functional'
+      category: 'Functional',
+      steps: []
     });
     setShowTestCaseModal(true);
   };
 
   const handleCreateTestPlan = () => {
-    console.log('Create test plan clicked'); // Debug log
+    console.log('Create test plan clicked');
     setTestPlanForm({
       name: '',
       description: '',
-      projectId: projects.length > 0 ? projects[0].id : '',
+      projectId: (projects || []).length > 0 ? (projects || [])[0]._id : '',
       testCases: [],
       strategy: {
         objectives: [''],
@@ -253,13 +203,14 @@ const TestManagerPortal = () => {
   };
 
   const handleCreateTestRun = () => {
-    console.log('Create test run clicked'); // Debug log
+    console.log('Create test run clicked');
     setTestRunForm({
       name: '',
       description: '',
-      testPlanId: testPlans.length > 0 ? testPlans[0].id : '',
-      projectId: projects.length > 0 ? projects[0].id : '',
-      executedBy: 'Current User'
+      testPlanId: (testPlans || []).length > 0 ? (testPlans || [])[0]._id : '',
+      projectId: (projects || []).length > 0 ? (projects || [])[0]._id : '',
+      executedBy: 'Current User',
+      testCaseResults: []
     });
     setShowTestRunModal(true);
   };
@@ -311,7 +262,8 @@ const TestManagerPortal = () => {
         description: item.description || '',
         project: item.project,
         priority: item.priority,
-        category: item.category || 'Functional'
+        category: item.category || 'Functional',
+        steps: item.steps || []
       });
       setShowTestCaseModal(true);
     } else if (type === 'testplan') {
@@ -342,168 +294,200 @@ const TestManagerPortal = () => {
     }
   };
 
-  const handleDeleteItem = (item, type) => {
+  const handleDeleteItem = async (item, type) => {
     console.log('Delete item clicked:', type, item);
     if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
-      if (type === 'project') {
-        setProjects(projects.filter(p => p.id !== item.id));
-      } else if (type === 'testcase') {
-        setTestCases(testCases.filter(tc => tc.id !== item.id));
-      } else if (type === 'testplan') {
-        setTestPlans(testPlans.filter(tp => tp.id !== item.id));
-      } else if (type === 'testrun') {
-        setTestRuns(testRuns.filter(tr => tr.id !== item.id));
+      try {
+        if (type === 'project') {
+          await ApiService.deleteProject(item._id);
+          setProjects((projects || []).filter(p => p._id !== item._id));
+        } else if (type === 'testcase') {
+          await ApiService.deleteTestCase(item._id);
+          setTestCases((testCases || []).filter(tc => tc._id !== item._id));
+        } else if (type === 'testplan') {
+          await ApiService.deleteTestPlan(item._id);
+          setTestPlans((testPlans || []).filter(tp => tp._id !== item._id));
+        } else if (type === 'testrun') {
+          await ApiService.deleteTestRun(item._id);
+          setTestRuns((testRuns || []).filter(tr => tr._id !== item._id));
+        }
+      } catch (err) {
+        setError(`Failed to delete ${type}: ` + err.message);
       }
     }
   };
 
-  const handleProjectSubmit = () => {
+  const handleProjectSubmit = async () => {
     if (!projectForm.name.trim()) return;
 
-    if (editingItem) {
-      // Update existing project
-      const updatedProjects = projects.map(p => 
-        p.id === editingItem.id 
-          ? { ...p, ...projectForm, team: projectForm.team.filter(member => member.trim() !== '') }
-          : p
-      );
-      setProjects(updatedProjects);
-      setEditingItem(null);
-    } else {
-      // Create new project
-      const newProject = {
-        id: projects.length + 1,
-        name: projectForm.name,
-        description: projectForm.description,
-        status: projectForm.status,
-        testCases: 0,
-        passRate: 0,
-        lastRun: new Date().toISOString().split('T')[0],
-        team: projectForm.team.filter(member => member.trim() !== '')
+    try {
+      const projectData = {
+        ...projectForm,
+        team: (projectForm.team || []).filter(member => member.trim() !== '')
       };
-      setProjects([...projects, newProject]);
+
+      if (editingItem) {
+        const updatedProject = await ApiService.updateProject(editingItem._id, projectData);
+        setProjects((projects || []).map(p => p._id === editingItem._id ? updatedProject : p));
+        setEditingItem(null);
+      } else {
+        const newProject = await ApiService.createProject(projectData);
+        setProjects([...(projects || []), newProject]);
+      }
+      setShowProjectModal(false);
+      
+      // Reset form only after successful submission
+      setProjectForm({
+        name: '',
+        description: '',
+        status: 'active',
+        team: ['']
+      });
+    } catch (err) {
+      setError('Failed to save project: ' + err.message);
     }
-    setShowProjectModal(false);
   };
 
-  const handleTestCaseSubmit = () => {
+  const handleTestCaseSubmit = async () => {
     if (!testCaseForm.title.trim()) return;
 
-    if (editingItem) {
-      // Update existing test case
-      const updatedTestCases = testCases.map(tc => 
-        tc.id === editingItem.id 
-          ? { ...tc, ...testCaseForm }
-          : tc
-      );
-      setTestCases(updatedTestCases);
-      setEditingItem(null);
-    } else {
-      // Create new test case
-      const newTestCase = {
-        id: testCases.length + 1,
-        title: testCaseForm.title,
-        project: testCaseForm.project,
-        priority: testCaseForm.priority,
-        status: 'pending',
-        lastRun: new Date().toISOString().split('T')[0],
-        steps: 0,
-        description: testCaseForm.description,
-        category: testCaseForm.category
-      };
-      setTestCases([...testCases, newTestCase]);
+    try {
+      if (editingItem) {
+        const updatedTestCase = await ApiService.updateTestCase(editingItem._id, testCaseForm);
+        setTestCases((testCases || []).map(tc => tc._id === editingItem._id ? updatedTestCase : tc));
+        setEditingItem(null);
+      } else {
+        const newTestCase = await ApiService.createTestCase(testCaseForm);
+        setTestCases([...(testCases || []), newTestCase]);
+      }
+      setShowTestCaseModal(false);
+      
+      // Reset form only after successful submission
+      setTestCaseForm({
+        title: '',
+        description: '',
+        project: (projects || []).length > 0 ? (projects || [])[0].name : '',
+        priority: 'Medium',
+        category: 'Functional',
+        steps: []
+      });
+    } catch (err) {
+      setError('Failed to save test case: ' + err.message);
     }
-    setShowTestCaseModal(false);
   };
 
-  const handleTestPlanSubmit = () => {
+  const handleTestPlanSubmit = async () => {
     if (!testPlanForm.name.trim()) return;
 
-    if (editingItem) {
-      // Update existing test plan
-      const updatedTestPlans = testPlans.map(tp => 
-        tp.id === editingItem.id 
-          ? { ...tp, ...testPlanForm, 
-              strategy: {
-                ...testPlanForm.strategy,
-                objectives: testPlanForm.strategy.objectives.filter(obj => obj.trim() !== ''),
-                deliverables: testPlanForm.strategy.deliverables.filter(del => del.trim() !== '')
-              }
-            }
-          : tp
-      );
-      setTestPlans(updatedTestPlans);
-      setEditingItem(null);
-    } else {
-      // Create new test plan
-      const newTestPlan = {
-        id: testPlans.length + 1,
-        name: testPlanForm.name,
-        description: testPlanForm.description,
-        projectId: parseInt(testPlanForm.projectId),
-        testCases: testPlanForm.testCases,
-        status: 'active',
-        createdDate: new Date().toISOString().split('T')[0],
+    try {
+      const testPlanData = {
+        ...testPlanForm,
+        status: editingItem ? editingItem.status : 'active',
+        createdDate: editingItem ? editingItem.createdDate : new Date().toISOString().split('T')[0],
         strategy: {
           ...testPlanForm.strategy,
-          objectives: testPlanForm.strategy.objectives.filter(obj => obj.trim() !== ''),
-          deliverables: testPlanForm.strategy.deliverables.filter(del => del.trim() !== '')
+          objectives: (testPlanForm.strategy.objectives || []).filter(obj => obj.trim() !== ''),
+          deliverables: (testPlanForm.strategy.deliverables || []).filter(del => del.trim() !== '')
         }
       };
-      setTestPlans([...testPlans, newTestPlan]);
+
+      if (editingItem) {
+        const updatedTestPlan = await ApiService.updateTestPlan(editingItem._id, testPlanData);
+        setTestPlans((testPlans || []).map(tp => tp._id === editingItem._id ? updatedTestPlan : tp));
+        setEditingItem(null);
+      } else {
+        const newTestPlan = await ApiService.createTestPlan(testPlanData);
+        setTestPlans([...(testPlans || []), newTestPlan]);
+      }
+      setShowTestPlanModal(false);
+      
+      // Reset form only after successful submission
+      setTestPlanForm({
+        name: '',
+        description: '',
+        projectId: (projects || []).length > 0 ? (projects || [])[0]._id : '',
+        testCases: [],
+        strategy: {
+          objectives: [''],
+          scope: '',
+          approach: '',
+          resources: '',
+          timeline: '',
+          deliverables: ['']
+        }
+      });
+    } catch (err) {
+      setError('Failed to save test plan: ' + err.message);
     }
-    setShowTestPlanModal(false);
   };
 
-  const handleTestRunSubmit = () => {
+  const handleTestRunSubmit = async () => {
     if (!testRunForm.name.trim()) return;
 
-    const selectedTestPlan = testPlans.find(tp => tp.id == testRunForm.testPlanId);
-    const selectedTestCases = selectedTestPlan ? selectedTestPlan.testCases : [];
+    try {
+      let selectedTestCases = [];
+      
+      if (testRunForm.testPlanId) {
+        // If a test plan is selected, get test cases from the test plan
+        const selectedTestPlan = (testPlans || []).find(tp => tp._id === testRunForm.testPlanId);
+        if (selectedTestPlan) {
+          selectedTestCases = (selectedTestPlan.testCases || []);
+        }
+      } else {
+        // If no test plan selected, get all test cases for the project
+        const projectTestCases = (testCases || []).filter(tc => {
+          const project = (projects || []).find(p => p._id === testRunForm.projectId);
+          return project ? tc.project === project.name : false;
+        });
+        selectedTestCases = projectTestCases.map(tc => tc._id);
+      }
 
-    if (editingItem) {
-      // Update existing test run
-      const updatedTestRuns = testRuns.map(tr => 
-        tr.id === editingItem.id 
-          ? { ...tr, ...testRunForm, 
-              testCaseResults: selectedTestCases.map(tcId => ({
-                testCaseId: tcId,
-                status: 'pending',
-                executedDate: null,
-                notes: ''
-              })),
-              totalTests: selectedTestCases.length
-            }
-          : tr
-      );
-      setTestRuns(updatedTestRuns);
-      setEditingItem(null);
-    } else {
-      // Create new test run
-      const newTestRun = {
-        id: testRuns.length + 1,
-        name: testRunForm.name,
-        description: testRunForm.description,
-        testPlanId: testRunForm.testPlanId ? parseInt(testRunForm.testPlanId) : null,
-        projectId: parseInt(testRunForm.projectId),
-        status: 'in_progress',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: null,
-        executedBy: testRunForm.executedBy,
-        testCaseResults: selectedTestCases.map(tcId => ({
-          testCaseId: tcId,
-          status: 'pending',
-          executedDate: null,
-          notes: ''
-        })),
+      const testRunData = {
+        ...testRunForm,
+        status: editingItem ? editingItem.status : 'pending',
+        startDate: editingItem ? editingItem.startDate : new Date().toISOString().split('T')[0],
+        testCaseResults: selectedTestCases.map(tcId => {
+          const testCase = (testCases || []).find(tc => tc._id === tcId);
+          return {
+            testCaseId: tcId,
+            status: 'pending',
+            executedDate: null,
+            notes: '',
+            stepResults: testCase?.steps?.map(() => ({
+              status: 'pending',
+              actualResult: '',
+              notes: ''
+            })) || []
+          };
+        }),
         totalTests: selectedTestCases.length,
-        passedTests: 0,
-        failedTests: 0,
-        skippedTests: 0
+        passedTests: editingItem ? editingItem.passedTests : 0,
+        failedTests: editingItem ? editingItem.failedTests : 0,
+        skippedTests: editingItem ? editingItem.skippedTests : 0
       };
-      setTestRuns([...testRuns, newTestRun]);
+
+      if (editingItem) {
+        const updatedTestRun = await ApiService.updateTestRun(editingItem._id, testRunData);
+        setTestRuns((testRuns || []).map(tr => tr._id === editingItem._id ? updatedTestRun : tr));
+        setEditingItem(null);
+      } else {
+        const newTestRun = await ApiService.createTestRun(testRunData);
+        setTestRuns([...(testRuns || []), newTestRun]);
+      }
+      setShowTestRunModal(false);
+      
+      // Reset form only after successful submission
+      setTestRunForm({
+        name: '',
+        description: '',
+        testPlanId: (testPlans || []).length > 0 ? (testPlans || [])[0]._id : '',
+        projectId: (projects || []).length > 0 ? (projects || [])[0]._id : '',
+        executedBy: 'Current User',
+        testCaseResults: []
+      });
+    } catch (err) {
+      setError('Failed to save test run: ' + err.message);
     }
-    setShowTestRunModal(false);
   };
 
   const handleAIGenerate = async () => {
@@ -521,7 +505,7 @@ const TestManagerPortal = () => {
     
     if (aiTask === 'project') {
       const newProject = {
-        id: projects.length + 1,
+        _id: Date.now().toString(),
         name: capitalizeWords(aiPrompt),
         description: `AI-generated testing project for ${aiPrompt}`,
         status: 'active',
@@ -530,27 +514,44 @@ const TestManagerPortal = () => {
         lastRun: new Date().toISOString().split('T')[0],
         team: ['AI Assistant', 'Test Lead']
       };
-      setProjects([...projects, newProject]);
+      setProjects([...(projects || []), newProject]);
     } else if (aiTask === 'testcase') {
       const newTestCase = {
-        id: testCases.length + 1,
+        _id: Date.now().toString(),
         title: capitalizeWords(aiPrompt),
-        project: projects.length > 0 ? projects[0].name : 'Default Project',
+        project: (projects || []).length > 0 ? (projects || [])[0].name : 'Default Project',
         priority: ['Low', 'Medium', 'High', 'Critical'][Math.floor(Math.random() * 4)],
         status: 'pending',
         lastRun: new Date().toISOString().split('T')[0],
-        steps: Math.floor(Math.random() * 8) + 3,
         description: `AI-generated test case for ${aiPrompt} functionality`,
-        category: 'Functional'
+        category: 'Functional',
+        steps: [
+          {
+            step: `Open the ${aiPrompt} module`,
+            expectedResult: `${aiPrompt} module loads successfully`
+          },
+          {
+            step: `Navigate to ${aiPrompt} functionality`,
+            expectedResult: `${aiPrompt} interface is displayed correctly`
+          },
+          {
+            step: `Execute ${aiPrompt} action`,
+            expectedResult: `${aiPrompt} performs as expected`
+          },
+          {
+            step: `Verify ${aiPrompt} results`,
+            expectedResult: `Results are accurate and properly displayed`
+          }
+        ]
       };
-      setTestCases([...testCases, newTestCase]);
+      setTestCases([...(testCases || []), newTestCase]);
     } else if (aiTask === 'testplan') {
       const newTestPlan = {
-        id: testPlans.length + 1,
+        _id: Date.now().toString(),
         name: capitalizeWords(aiPrompt) + ' Test Plan',
         description: `AI-generated test plan for ${aiPrompt} testing`,
-        projectId: projects.length > 0 ? projects[0].id : 1,
-        testCases: testCases.slice(0, Math.min(3, testCases.length)).map(tc => tc.id),
+        projectId: (projects || []).length > 0 ? (projects || [])[0]._id : 'default',
+        testCases: (testCases || []).slice(0, Math.min(3, (testCases || []).length)).map(tc => tc._id),
         status: 'active',
         createdDate: new Date().toISOString().split('T')[0],
         strategy: {
@@ -562,39 +563,39 @@ const TestManagerPortal = () => {
           deliverables: ['Test execution report', 'Defect analysis', 'Coverage documentation']
         }
       };
-      setTestPlans([...testPlans, newTestPlan]);
+      setTestPlans([...(testPlans || []), newTestPlan]);
     } else if (aiTask === 'testrun') {
-      const selectedProject = projects.length > 0 ? projects[0] : null;
-      const availableTestCases = testCases.filter(tc => 
+      const selectedProject = (projects || []).length > 0 ? (projects || [])[0] : null;
+      const availableTestCases = (testCases || []).filter(tc => 
         selectedProject ? tc.project === selectedProject.name : true
       );
       
-      const selectedTestCases = availableTestCases
+      const selectedTestCaseIds = availableTestCases
         .slice(0, Math.min(Math.floor(Math.random() * 3) + 2, availableTestCases.length))
-        .map(tc => tc.id);
+        .map(tc => tc._id);
 
       const newTestRun = {
-        id: testRuns.length + 1,
+        _id: Date.now().toString(),
         name: `${capitalizeWords(aiPrompt)} - Test Run`,
         description: `AI-generated test run for ${aiPrompt} testing`,
         testPlanId: null,
-        projectId: selectedProject?.id || 1,
+        projectId: selectedProject?._id || 'default',
         status: 'in_progress',
         startDate: new Date().toISOString().split('T')[0],
         endDate: null,
         executedBy: 'AI Assistant',
-        testCaseResults: selectedTestCases.map(tcId => ({
+        testCaseResults: selectedTestCaseIds.map(tcId => ({
           testCaseId: tcId,
           status: 'pending',
           executedDate: null,
           notes: ''
         })),
-        totalTests: selectedTestCases.length,
+        totalTests: selectedTestCaseIds.length,
         passedTests: 0,
         failedTests: 0,
         skippedTests: 0
       };
-      setTestRuns([...testRuns, newTestRun]);
+      setTestRuns([...(testRuns || []), newTestRun]);
     }
     
     setIsGenerating(false);
@@ -605,8 +606,8 @@ const TestManagerPortal = () => {
   const handleRunTest = (testCase) => {
     console.log('Run test clicked:', testCase);
     // Simulate running a test
-    const updatedTestCases = testCases.map(tc => {
-      if (tc.id === testCase.id) {
+    const updatedTestCases = (testCases || []).map(tc => {
+      if (tc._id === testCase._id) {
         return {
           ...tc,
           status: Math.random() > 0.5 ? 'passed' : 'failed',
@@ -621,38 +622,120 @@ const TestManagerPortal = () => {
   const handleExecuteTestPlan = (testPlan) => {
     console.log('Execute test plan clicked:', testPlan);
     // Create a new test run from the test plan
+    const planTestCases = (testPlan.testCases || []);
     const newTestRun = {
-      id: testRuns.length + 1,
+      _id: `${Date.now()}`,
       name: `${testPlan.name} - Auto Run`,
       description: `Automated execution of ${testPlan.name}`,
-      testPlanId: testPlan.id,
+      testPlanId: testPlan._id,
       projectId: testPlan.projectId,
-      status: 'in_progress',
+      status: 'pending',
       startDate: new Date().toISOString().split('T')[0],
       endDate: null,
       executedBy: 'Auto Executor',
-      testCaseResults: testPlan.testCases.map(tcId => ({
-        testCaseId: tcId,
-        status: 'pending',
-        executedDate: null,
-        notes: ''
-      })),
-      totalTests: testPlan.testCases.length,
+      testCaseResults: planTestCases.map(tcId => {
+        const testCase = (testCases || []).find(tc => tc._id === tcId);
+        return {
+          testCaseId: tcId,
+          status: 'pending',
+          executedDate: null,
+          notes: '',
+          stepResults: testCase?.steps?.map(() => ({
+            status: 'pending',
+            actualResult: '',
+            notes: ''
+          })) || []
+        };
+      }),
+      totalTests: planTestCases.length,
       passedTests: 0,
       failedTests: 0,
       skippedTests: 0
     };
-    setTestRuns([...testRuns, newTestRun]);
+    setTestRuns([...(testRuns || []), newTestRun]);
     alert('Test plan execution started! Check Test Runs tab.');
+  };
+
+  // Add functions to manage test steps
+  const addTestStep = () => {
+    setTestCaseForm({
+      ...testCaseForm,
+      steps: [...(testCaseForm.steps || []), { step: '', expectedResult: '' }]
+    });
+  };
+
+  const updateTestStep = (index, field, value) => {
+    const updatedSteps = (testCaseForm.steps || []).map((step, i) => 
+      i === index ? { ...step, [field]: value } : step
+    );
+    setTestCaseForm({
+      ...testCaseForm,
+      steps: updatedSteps
+    });
+  };
+
+  const removeTestStep = (index) => {
+    const updatedSteps = (testCaseForm.steps || []).filter((_, i) => i !== index);
+    setTestCaseForm({
+      ...testCaseForm,
+      steps: updatedSteps
+    });
+  };
+
+  // Add test execution handlers
+  const handleExecuteTestRun = (testRun) => {
+    console.log('Execute test run clicked:', testRun);
+    setExecutingTestRun(testRun);
+    setShowTestExecutionModal(true);
+  };
+
+  const handleUpdateTestResult = (testCaseId, status, notes = '') => {
+    if (!executingTestRun) return;
+
+    const updatedTestRun = {
+      ...executingTestRun,
+      testCaseResults: executingTestRun.testCaseResults.map(result => 
+        result.testCaseId === testCaseId 
+          ? { 
+              ...result, 
+              status, 
+              notes, 
+              executedDate: new Date().toISOString().split('T')[0]
+            }
+          : result
+      )
+    };
+
+    // Update counts
+    const passed = updatedTestRun.testCaseResults.filter(r => r.status === 'passed').length;
+    const failed = updatedTestRun.testCaseResults.filter(r => r.status === 'failed').length;
+    const skipped = updatedTestRun.testCaseResults.filter(r => r.status === 'skipped').length;
+    const pending = updatedTestRun.testCaseResults.filter(r => r.status === 'pending').length;
+
+    updatedTestRun.passedTests = passed;
+    updatedTestRun.failedTests = failed;
+    updatedTestRun.skippedTests = skipped;
+
+    // Update status based on completion
+    if (pending === 0) {
+      updatedTestRun.status = 'completed';
+      updatedTestRun.endDate = new Date().toISOString().split('T')[0];
+    } else {
+      updatedTestRun.status = 'in_progress';
+    }
+
+    setExecutingTestRun(updatedTestRun);
+    setTestRuns((testRuns || []).map(tr => tr._id === updatedTestRun._id ? updatedTestRun : tr));
   };
 
   const renderDashboard = () => (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
         <button
           onClick={() => { 
-            console.log('AI Generate clicked from dashboard'); // Debug log
+            console.log('AI Generate clicked from dashboard');
             setShowAIModal(true); 
             setAiTask('project'); 
           }}
@@ -663,69 +746,206 @@ const TestManagerPortal = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <Target className="w-8 h-8 text-blue-600" />
-            <div className="ml-4">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalProjects}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalProjects}</p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <Target className="w-8 h-8 text-blue-600" />
             </div>
           </div>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <FileText className="w-8 h-8 text-green-600" />
-            <div className="ml-4">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Test Cases</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalTestCases}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalTestCases}</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-lg">
+              <FileText className="w-8 h-8 text-green-600" />
             </div>
           </div>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-            <div className="ml-4">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Passed Tests</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats.passedTests}</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{dashboardStats.passedTests}</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-lg">
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
           </div>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <BarChart3 className="w-8 h-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Pass Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats.avgPassRate}%</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Failed Tests</p>
+              <p className="text-3xl font-bold text-red-600 mt-1">{dashboardStats.failedTests}</p>
+            </div>
+            <div className="bg-red-100 p-3 rounded-lg">
+              <XCircle className="w-8 h-8 text-red-600" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold mb-4">Recent Test Results</h3>
-        <div className="space-y-3">
-          {testCases.slice(0, 5).map(testCase => (
-            <div key={testCase.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                {testCase.status === 'passed' ? 
-                  <CheckCircle className="w-5 h-5 text-green-600" /> : 
-                  <XCircle className="w-5 h-5 text-red-600" />
-                }
-                <div>
-                  <p className="font-medium">{testCase.title}</p>
-                  <p className="text-sm text-gray-600">{testCase.project}</p>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Projects */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Projects</h3>
+            <button 
+              onClick={() => setActiveTab('projects')}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              View All
+            </button>
+          </div>
+          <div className="space-y-4">
+            {(projects || []).slice(0, 4).map(project => (
+              <div key={project._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Target className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{project.name}</p>
+                    <p className="text-sm text-gray-600">{project.description}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{project.testCases || 0} test cases</p>
+                  <p className="text-sm text-green-600">{project.passRate || 0}% pass rate</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <PriorityBadge priority={testCase.priority} />
-                <StatusBadge status={testCase.status} />
+            ))}
+            {(!projects || projects.length === 0) && (
+              <div className="text-center py-8 text-gray-500">
+                <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p>No projects created yet</p>
+                <button
+                  onClick={handleCreateProject}
+                  className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  Create your first project
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Test Results Summary */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Results</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Passed</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">{dashboardStats.passedTests}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Failed</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">{dashboardStats.failedTests}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Pending</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {(testCases || []).filter(tc => tc.status === 'pending').length}
+              </span>
+            </div>
+            
+            {/* Pass Rate Chart */}
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-gray-600">Overall Pass Rate</span>
+                <span className="text-lg font-bold text-gray-900">{dashboardStats.avgPassRate}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-green-500 h-3 rounded-full transition-all duration-300" 
+                  style={{ width: `${dashboardStats.avgPassRate}%` }}
+                ></div>
               </div>
             </div>
-          ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Test Cases */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Test Cases</h3>
+          <button 
+            onClick={() => setActiveTab('testcases')}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            View All
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test Case</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {(testCases || []).slice(0, 5).map(testCase => (
+                <tr key={testCase._id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{testCase.title}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{testCase.project}</td>
+                  <td className="px-4 py-3">
+                    <PriorityBadge priority={testCase.priority} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={testCase.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button 
+                      className="text-blue-600 hover:text-blue-800"
+                      onClick={() => handleRunTest(testCase)}
+                      title="Run Test"
+                    >
+                      <Play className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {testCases.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p>No test cases created yet</p>
+              <button
+                onClick={handleCreateTestCase}
+                className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Create your first test case
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -754,31 +974,31 @@ const TestManagerPortal = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {projects.map(project => (
-          <div key={project.id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+        {(projects || []).map(project => (
+          <div key={project._id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
                 <p className="text-gray-600 mt-1">{project.description}</p>
               </div>
-              <StatusBadge status={project.status} />
+              <StatusBadge status={project.status || 'active'} />
             </div>
             
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-sm text-gray-600">Test Cases</p>
-                <p className="text-2xl font-bold text-gray-900">{project.testCases}</p>
+                <p className="text-2xl font-bold text-gray-900">{project.testCases || 0}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Pass Rate</p>
-                <p className="text-2xl font-bold text-green-600">{project.passRate}%</p>
+                <p className="text-2xl font-bold text-green-600">{project.passRate || 0}%</p>
               </div>
             </div>
             
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">Team Members</p>
               <div className="flex gap-2">
-                {project.team.map((member, idx) => (
+                {(project.team || []).map((member, idx) => (
                   <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
                     {member}
                   </span>
@@ -787,7 +1007,7 @@ const TestManagerPortal = () => {
             </div>
             
             <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-600">Last run: {project.lastRun}</p>
+              <p className="text-sm text-gray-600">Last run: {project.lastRun || 'Never'}</p>
               <div className="flex gap-2">
                 <button 
                   className="text-blue-600 hover:text-blue-800"
@@ -815,6 +1035,21 @@ const TestManagerPortal = () => {
           </div>
         ))}
       </div>
+      
+      {(!projects || projects.length === 0) && (
+        <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+          <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Projects Created</h3>
+          <p className="text-gray-600 mb-6">Create your first project to get started</p>
+          <button
+            onClick={handleCreateProject}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+          >
+            <Plus className="w-5 h-5" />
+            Create Project
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -853,8 +1088,8 @@ const TestManagerPortal = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {testCases.map(testCase => (
-                <tr key={testCase.id} className="hover:bg-gray-50">
+              {(testCases || []).map(testCase => (
+                <tr key={testCase._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{testCase.title}</div>
                   </td>
@@ -897,6 +1132,19 @@ const TestManagerPortal = () => {
             </tbody>
           </table>
         </div>
+        
+        {(!testCases || testCases.length === 0) && (
+          <div className="text-center py-8 text-gray-500">
+            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p>No test cases created yet</p>
+            <button
+              onClick={handleCreateTestCase}
+              className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+            >
+              Create your first test case
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -924,12 +1172,12 @@ const TestManagerPortal = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {testPlans.map(testPlan => {
-          const project = projects.find(p => p.id === testPlan.projectId);
-          const planTestCases = testCases.filter(tc => testPlan.testCases.includes(tc.id));
+        {(testPlans || []).map(testPlan => {
+          const project = (projects || []).find(p => p._id === testPlan.projectId);
+          const planTestCases = (testCases || []).filter(tc => (testPlan.testCases || []).includes(tc._id));
           
           return (
-            <div key={testPlan.id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+            <div key={testPlan._id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{testPlan.name}</h3>
@@ -945,7 +1193,7 @@ const TestManagerPortal = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Test Cases</p>
-                  <p className="text-2xl font-bold text-gray-900">{testPlan.testCases.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(testPlan.testCases || []).length}</p>
                 </div>
               </div>
 
@@ -954,7 +1202,7 @@ const TestManagerPortal = () => {
                   <p className="text-sm text-gray-600 mb-2">Included Test Cases</p>
                   <div className="space-y-1 max-h-24 overflow-y-auto">
                     {planTestCases.slice(0, 3).map(tc => (
-                      <div key={tc.id} className="flex items-center justify-between text-xs bg-gray-50 rounded p-2">
+                      <div key={tc._id} className="flex items-center justify-between text-xs bg-gray-50 rounded p-2">
                         <span className="text-gray-700 truncate">{tc.title}</span>
                         <PriorityBadge priority={tc.priority} />
                       </div>
@@ -1047,13 +1295,13 @@ const TestManagerPortal = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {testRuns.map(testRun => {
-          const testPlan = testPlans.find(tp => tp.id === testRun.testPlanId);
-          const project = projects.find(p => p.id === testRun.projectId);
+        {(testRuns || []).map(testRun => {
+          const testPlan = (testPlans || []).find(tp => tp._id === testRun.testPlanId);
+          const project = (projects || []).find(p => p._id === testRun.projectId);
           const passRate = testRun.totalTests > 0 ? Math.round((testRun.passedTests / testRun.totalTests) * 100) : 0;
           
           return (
-            <div key={testRun.id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+            <div key={testRun._id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{testRun.name}</h3>
@@ -1111,6 +1359,14 @@ const TestManagerPortal = () => {
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-600">Executed by: {testRun.executedBy}</p>
                 <div className="flex gap-2">
+                  <button 
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center gap-1"
+                    onClick={() => handleExecuteTestRun(testRun)}
+                    title="Execute Tests"
+                  >
+                    <Play className="w-3 h-3" />
+                    Execute
+                  </button>
                   <button 
                     className="text-blue-600 hover:text-blue-800" 
                     title="View Details"
@@ -1175,25 +1431,25 @@ const TestManagerPortal = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Test Runs</span>
-              <span className="text-lg font-bold text-gray-900">{testRuns.length}</span>
+              <span className="text-lg font-bold text-gray-900">{(testRuns || []).length}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Completed Runs</span>
               <span className="text-lg font-bold text-green-600">
-                {testRuns.filter(tr => tr.status === 'completed').length}
+                {(testRuns || []).filter(tr => tr.status === 'completed').length}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">In Progress</span>
               <span className="text-lg font-bold text-yellow-600">
-                {testRuns.filter(tr => tr.status === 'in_progress').length}
+                {(testRuns || []).filter(tr => tr.status === 'in_progress').length}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Average Pass Rate</span>
               <span className="text-lg font-bold text-blue-600">
-                {testRuns.length > 0 
-                  ? Math.round(testRuns.reduce((acc, tr) => acc + (tr.totalTests > 0 ? (tr.passedTests / tr.totalTests) * 100 : 0), 0) / testRuns.length)
+                {(testRuns || []).length > 0 
+                  ? Math.round((testRuns || []).reduce((acc, tr) => acc + (tr.totalTests > 0 ? (tr.passedTests / tr.totalTests) * 100 : 0), 0) / (testRuns || []).length)
                   : 0}%
               </span>
             </div>
@@ -1210,7 +1466,7 @@ const TestManagerPortal = () => {
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-green-600 h-2 rounded-full" 
-                style={{ width: `${(dashboardStats.passedTests / dashboardStats.totalTestCases) * 100}%` }}
+                style={{ width: `${dashboardStats.totalTestCases > 0 ? (dashboardStats.passedTests / dashboardStats.totalTestCases) * 100 : 0}%` }}
               ></div>
             </div>
             <div className="flex justify-between items-center">
@@ -1220,19 +1476,19 @@ const TestManagerPortal = () => {
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-red-600 h-2 rounded-full" 
-                style={{ width: `${(dashboardStats.failedTests / dashboardStats.totalTestCases) * 100}%` }}
+                style={{ width: `${dashboardStats.totalTestCases > 0 ? (dashboardStats.failedTests / dashboardStats.totalTestCases) * 100 : 0}%` }}
               ></div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Pending Tests</span>
               <span className="text-sm font-medium text-yellow-600">
-                {testCases.filter(tc => tc.status === 'pending').length}
+                {(testCases || []).filter(tc => tc.status === 'pending').length}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-yellow-600 h-2 rounded-full" 
-                style={{ width: `${(testCases.filter(tc => tc.status === 'pending').length / dashboardStats.totalTestCases) * 100}%` }}
+                style={{ width: `${dashboardStats.totalTestCases > 0 ? ((testCases || []).filter(tc => tc.status === 'pending').length / dashboardStats.totalTestCases) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -1252,23 +1508,29 @@ const TestManagerPortal = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {projects.map(project => {
-                  const projectTestPlans = testPlans.filter(tp => tp.projectId === project.id);
-                  const projectTestRuns = testRuns.filter(tr => tr.projectId === project.id);
+                {(projects || []).map(project => {
+                  const projectTestPlans = (testPlans || []).filter(tp => tp.projectId === project._id);
+                  const projectTestRuns = (testRuns || []).filter(tr => tr.projectId === project._id);
                   
                   return (
-                    <tr key={project.id}>
+                    <tr key={project._id}>
                       <td className="px-4 py-2 text-sm font-medium text-gray-900">{project.name}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">{projectTestPlans.length}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">{projectTestRuns.length}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{project.passRate}%</td>
-                      <td className="px-4 py-2"><StatusBadge status={project.status} /></td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{project.passRate || 0}%</td>
+                      <td className="px-4 py-2"><StatusBadge status={project.status || 'active'} /></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+          
+          {(!projects || projects.length === 0) && (
+            <div className="text-center py-8 text-gray-500">
+              <p>No projects to display</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1283,8 +1545,46 @@ const TestManagerPortal = () => {
     showTestRunModal
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h3 className="font-bold mb-2">Error Loading Data</h3>
+            <p className="text-sm">{error}</p>
+          </div>
+          <div className="text-sm text-gray-600 mb-4">
+            <p>Application is running in localStorage mode.</p>
+          </div>
+          <button 
+            onClick={loadAllData} // Change from checkServerAndLoadData to loadAllData
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retry Loading
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Add inline style to override text centering
+  const leftAlignStyle = {
+    textAlign: 'left'
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={leftAlignStyle}>
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -1342,50 +1642,48 @@ const TestManagerPortal = () => {
         {activeTab === 'reports' && renderReports()}
       </div>
 
-      {/* Debug info - remove this after testing */}
-      <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs z-50">
-        Modals: AI:{showAIModal ? 'Y' : 'N'} | Proj:{showProjectModal ? 'Y' : 'N'} | TC:{showTestCaseModal ? 'Y' : 'N'} | TP:{showTestPlanModal ? 'Y' : 'N'} | TR:{showTestRunModal ? 'Y' : 'N'}
-      </div>
-
       {/* AI Generation Modal */}
       {showAIModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md" style={leftAlignStyle}>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={leftAlignStyle}>
               <Bot className="w-5 h-5 text-purple-600" />
               AI Generation
             </h3>
             
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Generate Type</label>
+            <div className="mb-4" style={leftAlignStyle}>
+              <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Generate Type</label>
               <select
                 value={aiTask}
                 onChange={(e) => setAiTask(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                style={leftAlignStyle}
               >
-                <option value="project">Project</option>
-                <option value="testcase">Test Case</option>
-                <option value="testplan">Test Plan</option>
-                <option value="testrun">Test Run</option>
+                <option value="project" style={leftAlignStyle}>Project</option>
+                <option value="testcase" style={leftAlignStyle}>Test Case</option>
+                <option value="testplan" style={leftAlignStyle}>Test Plan</option>
+                <option value="testrun" style={leftAlignStyle}>Test Run</option>
               </select>
             </div>
             
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <div className="mb-4" style={leftAlignStyle}>
+              <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="e.g., User authentication system, Shopping cart functionality..."
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows="3"
+                style={leftAlignStyle}
               />
             </div>
             
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3" style={leftAlignStyle}>
               <button
                 onClick={() => setShowAIModal(false)}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 disabled={isGenerating}
+                style={leftAlignStyle}
               >
                 Cancel
               </button>
@@ -1393,6 +1691,7 @@ const TestManagerPortal = () => {
                 onClick={handleAIGenerate}
                 disabled={!aiPrompt.trim() || isGenerating}
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                style={leftAlignStyle}
               >
                 {isGenerating ? (
                   <>
@@ -1414,48 +1713,52 @@ const TestManagerPortal = () => {
       {/* Project Modal */}
       {showProjectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md" style={leftAlignStyle}>
+            <h3 className="text-lg font-semibold mb-4" style={leftAlignStyle}>
               {editingItem ? 'Edit Project' : 'Create New Project'}
             </h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
+            <div className="space-y-4" style={leftAlignStyle}>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Project Name</label>
                 <input
                   type="text"
                   value={projectForm.name}
                   onChange={(e) => setProjectForm({...projectForm, name: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter project name"
+                  style={leftAlignStyle}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
                 <textarea
                   value={projectForm.description}
                   onChange={(e) => setProjectForm({...projectForm, description: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the project"
                   rows="3"
+                  style={leftAlignStyle}
                 />
               </div>
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-6" style={leftAlignStyle}>
               <button
                 onClick={() => {
                   setShowProjectModal(false);
                   setEditingItem(null);
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                style={leftAlignStyle}
               >
                 Cancel
               </button>
               <button
                 onClick={handleProjectSubmit}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                style={leftAlignStyle}
               >
                 {editingItem ? 'Update Project' : 'Create Project'}
               </button>
@@ -1467,75 +1770,148 @@ const TestManagerPortal = () => {
       {/* Test Case Modal */}
       {showTestCaseModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={leftAlignStyle}>
+            <h3 className="text-lg font-semibold mb-4" style={leftAlignStyle}>
               {editingItem ? 'Edit Test Case' : 'Create New Test Case'}
             </h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Test Case Title</label>
+            <div className="space-y-4" style={leftAlignStyle}>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Case Title</label>
                 <input
                   type="text"
                   value={testCaseForm.title}
                   onChange={(e) => setTestCaseForm({...testCaseForm, title: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter test case title"
+                  style={leftAlignStyle}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
-                <select
-                  value={testCaseForm.project}
-                  onChange={(e) => setTestCaseForm({...testCaseForm, project: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {projects.map(project => (
-                    <option key={project.id} value={project.name}>{project.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={leftAlignStyle}>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Project</label>
+                  <select
+                    value={testCaseForm.project}
+                    onChange={(e) => setTestCaseForm({...testCaseForm, project: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={leftAlignStyle}
+                  >
+                    {(projects || []).map(project => (
+                      <option key={project._id} value={project.name} style={leftAlignStyle}>{project.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Priority</label>
+                  <select
+                    value={testCaseForm.priority}
+                    onChange={(e) => setTestCaseForm({...testCaseForm, priority: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={leftAlignStyle}
+                  >
+                    <option value="Low" style={leftAlignStyle}>Low</option>
+                    <option value="Medium" style={leftAlignStyle}>Medium</option>
+                    <option value="High" style={leftAlignStyle}>High</option>
+                    <option value="Critical" style={leftAlignStyle}>Critical</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                <select
-                  value={testCaseForm.priority}
-                  onChange={(e) => setTestCaseForm({...testCaseForm, priority: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Critical">Critical</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
                 <textarea
                   value={testCaseForm.description}
                   onChange={(e) => setTestCaseForm({...testCaseForm, description: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the test case"
                   rows="3"
+                  style={leftAlignStyle}
                 />
+              </div>
+
+              {/* Test Steps Section */}
+              <div style={leftAlignStyle}>
+                <div className="flex justify-between items-center mb-3" style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700" style={leftAlignStyle}>Test Steps</label>
+                  <button
+                    type="button"
+                    onClick={addTestStep}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center gap-1"
+                    style={leftAlignStyle}
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Step
+                  </button>
+                </div>
+                
+                <div className="space-y-3 max-h-60 overflow-y-auto" style={leftAlignStyle}>
+                  {(testCaseForm.steps || []).map((step, index) => (
+                    <div key={index} className="border rounded-lg p-3 bg-gray-50" style={leftAlignStyle}>
+                      <div className="flex justify-between items-center mb-2" style={leftAlignStyle}>
+                        <span className="text-sm font-medium text-gray-700" style={leftAlignStyle}>Step {index + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTestStep(index)}
+                          className="text-red-600 hover:text-red-800"
+                          style={leftAlignStyle}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="space-y-2" style={leftAlignStyle}>
+                        <div style={leftAlignStyle}>
+                          <label className="block text-xs font-medium text-gray-600 mb-1" style={leftAlignStyle}>Action</label>
+                          <input
+                            type="text"
+                            value={step.step || ''}
+                            onChange={(e) => updateTestStep(index, 'step', e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Describe the action to perform"
+                            style={leftAlignStyle}
+                          />
+                        </div>
+                        <div style={leftAlignStyle}>
+                          <label className="block text-xs font-medium text-gray-600 mb-1" style={leftAlignStyle}>Expected Result</label>
+                          <input
+                            type="text"
+                            value={step.expectedResult || ''}
+                            onChange={(e) => updateTestStep(index, 'expectedResult', e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Describe the expected outcome"
+                            style={leftAlignStyle}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {(!testCaseForm.steps || testCaseForm.steps.length === 0) && (
+                    <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg" style={leftAlignStyle}>
+                      <p className="text-sm" style={leftAlignStyle}>No test steps added yet</p>
+                      <p className="text-xs text-gray-400" style={leftAlignStyle}>Click "Add Step" to create your first test step</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-6" style={leftAlignStyle}>
               <button
                 onClick={() => {
                   setShowTestCaseModal(false);
                   setEditingItem(null);
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                style={leftAlignStyle}
               >
                 Cancel
               </button>
               <button
                 onClick={handleTestCaseSubmit}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                style={leftAlignStyle}
               >
                 {editingItem ? 'Update Test Case' : 'Create Test Case'}
               </button>
@@ -1547,71 +1923,77 @@ const TestManagerPortal = () => {
       {/* Test Plan Modal */}
       {showTestPlanModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h3 className="text-lg font-semibold mb-4">Create New Test Plan</h3>
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl" style={leftAlignStyle}>
+            <h3 className="text-lg font-semibold mb-4" style={leftAlignStyle}>
+              {editingItem ? 'Edit Test Plan' : 'Create New Test Plan'}
+            </h3>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Test Plan Name</label>
+            <div className="space-y-4" style={leftAlignStyle}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={leftAlignStyle}>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Plan Name</label>
                   <input
                     type="text"
                     value={testPlanForm.name}
                     onChange={(e) => setTestPlanForm({...testPlanForm, name: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter test plan name"
+                    style={leftAlignStyle}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Project</label>
                   <select
                     value={testPlanForm.projectId}
                     onChange={(e) => setTestPlanForm({...testPlanForm, projectId: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={leftAlignStyle}
                   >
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                    {(projects || []).map(project => (
+                      <option key={project._id} value={project._id} style={leftAlignStyle}>{project.name}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
                 <textarea
                   value={testPlanForm.description}
                   onChange={(e) => setTestPlanForm({...testPlanForm, description: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the test plan"
                   rows="3"
+                  style={leftAlignStyle}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Select Test Cases</label>
-                <div className="max-h-40 overflow-y-auto border rounded-lg p-3 space-y-2">
-                  {testCases.map(testCase => (
-                    <label key={testCase.id} className="flex items-center space-x-2">
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-3" style={leftAlignStyle}>Select Test Cases</label>
+                <div className="max-h-40 overflow-y-auto border rounded-lg p-3 space-y-2" style={leftAlignStyle}>
+                  {(testCases || []).map(testCase => (
+                    <label key={testCase._id} className="flex items-center space-x-2" style={leftAlignStyle}>
                       <input
                         type="checkbox"
-                        checked={testPlanForm.testCases.includes(testCase.id)}
+                        checked={testPlanForm.testCases.includes(testCase._id)}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setTestPlanForm({
                               ...testPlanForm,
-                              testCases: [...testPlanForm.testCases, testCase.id]
+                              testCases: [...testPlanForm.testCases, testCase._id]
                             });
                           } else {
                             setTestPlanForm({
                               ...testPlanForm,
-                              testCases: testPlanForm.testCases.filter(id => id !== testCase.id)
+                              testCases: testPlanForm.testCases.filter(id => id !== testCase._id)
                             });
                           }
                         }}
                         className="rounded"
+                        style={leftAlignStyle}
                       />
-                      <span className="text-sm">{testCase.title}</span>
+                      <span className="text-sm" style={leftAlignStyle}>{testCase.title}</span>
                       <PriorityBadge priority={testCase.priority} />
                     </label>
                   ))}
@@ -1619,18 +2001,23 @@ const TestManagerPortal = () => {
               </div>
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-6" style={leftAlignStyle}>
               <button
-                onClick={() => setShowTestPlanModal(false)}
+                onClick={() => {
+                  setShowTestPlanModal(false);
+                  setEditingItem(null);
+                }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                style={leftAlignStyle}
               >
                 Cancel
               </button>
               <button
                 onClick={handleTestPlanSubmit}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                style={leftAlignStyle}
               >
-                Create Test Plan
+                {editingItem ? 'Update Test Plan' : 'Create Test Plan'}
               </button>
             </div>
           </div>
@@ -1640,90 +2027,97 @@ const TestManagerPortal = () => {
       {/* Test Run Modal */}
       {showTestRunModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h3 className="text-lg font-semibold mb-4">Create New Test Run</h3>
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl" style={leftAlignStyle}>
+            <h3 className="text-lg font-semibold mb-4" style={leftAlignStyle}>Create New Test Run</h3>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Test Run Name</label>
+            <div className="space-y-4" style={leftAlignStyle}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={leftAlignStyle}>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Run Name</label>
                   <input
                     type="text"
                     value={testRunForm.name}
                     onChange={(e) => setTestRunForm({...testRunForm, name: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter test run name"
+                    style={leftAlignStyle}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Executed By</label>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Executed By</label>
                   <input
                     type="text"
                     value={testRunForm.executedBy}
                     onChange={(e) => setTestRunForm({...testRunForm, executedBy: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter executor name"
+                    style={leftAlignStyle}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <div style={leftAlignStyle}>
+                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
                 <textarea
                   value={testRunForm.description}
                   onChange={(e) => setTestRunForm({...testRunForm, description: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the test run (optional)"
                   rows="3"
+                  style={leftAlignStyle}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={leftAlignStyle}>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Project</label>
                   <select
                     value={testRunForm.projectId}
                     onChange={(e) => setTestRunForm({...testRunForm, projectId: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={leftAlignStyle}
                   >
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                    {(projects || []).map(project => (
+                      <option key={project._id} value={project._id} style={leftAlignStyle}>{project.name}</option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Test Plan (Optional)</label>
+                <div style={leftAlignStyle}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Plan (Optional)</label>
                   <select
                     value={testRunForm.testPlanId}
                     onChange={(e) => setTestRunForm({...testRunForm, testPlanId: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={leftAlignStyle}
                   >
-                    <option value="">No Test Plan (Manual Selection)</option>
-                    {testPlans
+                    <option value="" style={leftAlignStyle}>No Test Plan (Manual Selection)</option>
+                    {(testPlans || [])
                       .filter(tp => tp.projectId == testRunForm.projectId)
                       .map(testPlan => (
-                        <option key={testPlan.id} value={testPlan.id}>{testPlan.name}</option>
+                        <option key={testPlan._id} value={testPlan._id} style={leftAlignStyle}>{testPlan.name}</option>
                       ))}
                   </select>
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-6" style={leftAlignStyle}>
               <button
                 onClick={() => {
                   setShowTestRunModal(false);
                   setEditingItem(null);
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                style={leftAlignStyle}
               >
                 Cancel
               </button>
               <button
                 onClick={handleTestRunSubmit}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                style={leftAlignStyle}
               >
                 Create Test Run
               </button>
@@ -1735,9 +2129,9 @@ const TestManagerPortal = () => {
       {/* View Modal */}
       {showViewModal && viewModalData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" style={leftAlignStyle}>
+            <div className="flex justify-between items-center mb-4" style={leftAlignStyle}>
+              <h3 className="text-lg font-semibold" style={leftAlignStyle}>
                 {viewModalType === 'project' && `Project: ${viewModalData.name}`}
                 {viewModalType === 'testcase' && `Test Case: ${viewModalData.title}`}
                 {viewModalType === 'testplan' && `Test Plan: ${viewModalData.name}`}
@@ -1746,21 +2140,172 @@ const TestManagerPortal = () => {
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-500 hover:text-gray-700"
+                style={leftAlignStyle}
               >
                 ✕
               </button>
             </div>
             
-            <div className="space-y-4">
-              <pre className="bg-gray-50 p-4 rounded-lg text-sm overflow-x-auto">
+            <div className="space-y-4" style={leftAlignStyle}>
+              <pre className="bg-gray-50 p-4 rounded-lg text-sm overflow-x-auto" style={leftAlignStyle}>
                 {JSON.stringify(viewModalData, null, 2)}
               </pre>
             </div>
             
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-6" style={leftAlignStyle}>
               <button
                 onClick={() => setShowViewModal(false)}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                style={leftAlignStyle}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Execution Modal */}
+      {showTestExecutionModal && executingTestRun && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" style={leftAlignStyle}>
+            <div className="flex justify-between items-center mb-4" style={leftAlignStyle}>
+              <h3 className="text-lg font-semibold" style={leftAlignStyle}>
+                Execute Test Run: {executingTestRun.name}
+              </h3>
+              <button
+                onClick={() => setShowTestExecutionModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+                style={leftAlignStyle}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-6" style={leftAlignStyle}>
+              <div className="grid grid-cols-4 gap-4 text-center" style={leftAlignStyle}>
+                <div className="bg-blue-50 p-3 rounded">
+                  <p className="text-lg font-bold text-blue-600">{executingTestRun.totalTests}</p>
+                  <p className="text-xs text-blue-600">Total</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded">
+                  <p className="text-lg font-bold text-green-600">{executingTestRun.passedTests}</p>
+                  <p className="text-xs text-green-600">Passed</p>
+                </div>
+                <div className="bg-red-50 p-3 rounded">
+                  <p className="text-lg font-bold text-red-600">{executingTestRun.failedTests}</p>
+                  <p className="text-xs text-red-600">Failed</p>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded">
+                  <p className="text-lg font-bold text-yellow-600">{executingTestRun.skippedTests}</p>
+                  <p className="text-xs text-yellow-600">Skipped</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4" style={leftAlignStyle}>
+              {executingTestRun.testCaseResults.map((result, index) => {
+                const testCase = (testCases || []).find(tc => tc._id === result.testCaseId);
+                if (!testCase) return null;
+
+                return (
+                  <div key={result.testCaseId} className="border rounded-lg p-4 bg-gray-50" style={leftAlignStyle}>
+                    <div className="flex justify-between items-start mb-3" style={leftAlignStyle}>
+                      <div style={leftAlignStyle}>
+                        <h4 className="font-medium text-gray-900" style={leftAlignStyle}>
+                          {index + 1}. {testCase.title}
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1" style={leftAlignStyle}>
+                          {testCase.description}
+                        </p>
+                      </div>
+                      <div className="flex gap-2" style={leftAlignStyle}>
+                        <StatusBadge status={result.status} />
+                        <PriorityBadge priority={testCase.priority} />
+                      </div>
+                    </div>
+
+                    {testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0 && (
+                      <div className="mb-3" style={leftAlignStyle}>
+                        <p className="text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Steps:</p>
+                        <div className="space-y-2" style={leftAlignStyle}>
+                          {testCase.steps.map((step, stepIndex) => (
+                            <div key={stepIndex} className="bg-white p-2 rounded border-l-4 border-blue-200" style={leftAlignStyle}>
+                              <p className="text-sm" style={leftAlignStyle}>
+                                <span className="font-medium" style={leftAlignStyle}>Step {stepIndex + 1}:</span> {step.step}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1" style={leftAlignStyle}>
+                                <span className="font-medium" style={leftAlignStyle}>Expected:</span> {step.expectedResult}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(!testCase.steps || !Array.isArray(testCase.steps) || testCase.steps.length === 0) && (
+                      <div className="mb-3 text-center py-3 text-gray-500 bg-yellow-50 rounded border" style={leftAlignStyle}>
+                        <p className="text-sm" style={leftAlignStyle}>No test steps defined for this test case</p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center" style={leftAlignStyle}>
+                      <div className="flex gap-2" style={leftAlignStyle}>
+                        <button
+                          onClick={() => handleUpdateTestResult(result.testCaseId, 'passed')}
+                          className={`px-3 py-1 rounded text-sm ${
+                            result.status === 'passed' 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                          style={leftAlignStyle}
+                        >
+                          Pass
+                        </button>
+                        <button
+                          onClick={() => handleUpdateTestResult(result.testCaseId, 'failed')}
+                          className={`px-3 py-1 rounded text-sm ${
+                            result.status === 'failed' 
+                              ? 'bg-red-600 text-white' 
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          style={leftAlignStyle}
+                        >
+                          Fail
+                        </button>
+                        <button
+                          onClick={() => handleUpdateTestResult(result.testCaseId, 'skipped')}
+                          className={`px-3 py-1 rounded text-sm ${
+                            result.status === 'skipped' 
+                              ? 'bg-yellow-600 text-white' 
+                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          }`}
+                          style={leftAlignStyle}
+                        >
+                          Skip
+                        </button>
+                      </div>
+                      <div className="flex-1 ml-4" style={leftAlignStyle}>
+                        <input
+                          type="text"
+                          value={result.notes}
+                          onChange={(e) => handleUpdateTestResult(result.testCaseId, result.status, e.target.value)}
+                          placeholder="Add notes (optional)"
+                          className="w-full px-3 py-1 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          style={leftAlignStyle}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="flex justify-end mt-6" style={leftAlignStyle}>
+              <button
+                onClick={() => setShowTestExecutionModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                style={leftAlignStyle}
               >
                 Close
               </button>
