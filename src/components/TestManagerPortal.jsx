@@ -19,6 +19,13 @@ import {
   Settings
 } from 'lucide-react';
 
+// Import new components
+import Dashboard from './Dashboard';
+import StatusBadge from './StatusBadge';
+import PriorityBadge from './PriorityBadge';
+import TestCaseModal from './modals/TestCaseModal';
+import TestExecutionModal from './modals/TestExecutionModal';
+
 const TestManagerPortal = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -117,46 +124,40 @@ const TestManagerPortal = () => {
     }
   };
 
+  const calculateProjectPassRate = (projectId) => {
+    // Get all test runs for this project
+    const projectTestRuns = (testRuns || []).filter(tr => tr.projectId === projectId);
+    
+    if (projectTestRuns.length === 0) return 0;
+    
+    // Calculate average pass rate across all test runs for this project
+    const totalPassRates = projectTestRuns.reduce((acc, testRun) => {
+      if (testRun.totalTests > 0) {
+        const passRate = (testRun.passedTests / testRun.totalTests) * 100;
+        return acc + passRate;
+      }
+      return acc;
+    }, 0);
+    
+    return Math.round(totalPassRates / projectTestRuns.length);
+  };
+
+  const calculateProjectTestCaseCount = (projectId) => {
+    // Get project name first
+    const project = (projects || []).find(p => p._id === projectId);
+    if (!project) return 0;
+    
+    // Count test cases that belong to this project
+    return (testCases || []).filter(tc => tc.project === project.name).length;
+  };
+
   const dashboardStats = {
     totalProjects: (projects || []).length,
     totalTestCases: (testCases || []).length,
     passedTests: (testCases || []).filter(tc => tc.status === 'passed').length,
     failedTests: (testCases || []).filter(tc => tc.status === 'failed').length,
-    avgPassRate: (projects || []).length > 0 ? Math.round((projects || []).reduce((acc, p) => acc + (p.passRate || 0), 0) / (projects || []).length) : 0
-  };
-
-  const StatusBadge = ({ status }) => {
-    const safeStatus = status || 'pending';
-    const colors = {
-      passed: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      active: 'bg-blue-100 text-blue-800',
-      completed: 'bg-gray-100 text-gray-800',
-      in_progress: 'bg-yellow-100 text-yellow-800',
-      skipped: 'bg-yellow-100 text-yellow-800'
-    };
-    
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[safeStatus] || colors.pending}`}>
-        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
-      </span>
-    );
-  };
-
-  const PriorityBadge = ({ priority }) => {
-    const colors = {
-      Low: 'bg-green-100 text-green-800',
-      Medium: 'bg-yellow-100 text-yellow-800',
-      High: 'bg-orange-100 text-orange-800',
-      Critical: 'bg-red-100 text-red-800'
-    };
-    
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[priority]}`}>
-        {priority}
-      </span>
-    );
+    avgPassRate: (projects || []).length > 0 ? 
+      Math.round((projects || []).reduce((acc, p) => acc + calculateProjectPassRate(p._id), 0) / (projects || []).length) : 0
   };
 
   const handleCreateProject = () => {
@@ -728,229 +729,6 @@ const TestManagerPortal = () => {
     setTestRuns((testRuns || []).map(tr => tr._id === updatedTestRun._id ? updatedTestRun : tr));
   };
 
-  const renderDashboard = () => (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <button
-          onClick={() => { 
-            console.log('AI Generate clicked from dashboard');
-            setShowAIModal(true); 
-            setAiTask('project'); 
-          }}
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
-        >
-          <Bot className="w-4 h-4" />
-          AI Generate
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalProjects}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Target className="w-8 h-8 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Test Cases</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalTestCases}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <FileText className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Passed Tests</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{dashboardStats.passedTests}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Failed Tests</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">{dashboardStats.failedTests}</p>
-            </div>
-            <div className="bg-red-100 p-3 rounded-lg">
-              <XCircle className="w-8 h-8 text-red-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Projects */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Projects</h3>
-            <button 
-              onClick={() => setActiveTab('projects')}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            {(projects || []).slice(0, 4).map(project => (
-              <div key={project._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Target className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{project.name}</p>
-                    <p className="text-sm text-gray-600">{project.description}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{project.testCases || 0} test cases</p>
-                  <p className="text-sm text-green-600">{project.passRate || 0}% pass rate</p>
-                </div>
-              </div>
-            ))}
-            {(!projects || projects.length === 0) && (
-              <div className="text-center py-8 text-gray-500">
-                <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p>No projects created yet</p>
-                <button
-                  onClick={handleCreateProject}
-                  className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  Create your first project
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Test Results Summary */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Results</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Passed</span>
-              </div>
-              <span className="text-sm font-medium text-gray-900">{dashboardStats.passedTests}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Failed</span>
-              </div>
-              <span className="text-sm font-medium text-gray-900">{dashboardStats.failedTests}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Pending</span>
-              </div>
-              <span className="text-sm font-medium text-gray-900">
-                {(testCases || []).filter(tc => tc.status === 'pending').length}
-              </span>
-            </div>
-            
-            {/* Pass Rate Chart */}
-            <div className="mt-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600">Overall Pass Rate</span>
-                <span className="text-lg font-bold text-gray-900">{dashboardStats.avgPassRate}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-green-500 h-3 rounded-full transition-all duration-300" 
-                  style={{ width: `${dashboardStats.avgPassRate}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Test Cases */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Test Cases</h3>
-          <button 
-            onClick={() => setActiveTab('testcases')}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            View All
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test Case</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {(testCases || []).slice(0, 5).map(testCase => (
-                <tr key={testCase._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{testCase.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{testCase.project}</td>
-                  <td className="px-4 py-3">
-                    <PriorityBadge priority={testCase.priority} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={testCase.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <button 
-                      className="text-blue-600 hover:text-blue-800"
-                      onClick={() => handleRunTest(testCase)}
-                      title="Run Test"
-                    >
-                      <Play className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {testCases.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p>No test cases created yet</p>
-              <button
-                onClick={handleCreateTestCase}
-                className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-              >
-                Create your first test case
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
   const renderProjects = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -974,66 +752,76 @@ const TestManagerPortal = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {(projects || []).map(project => (
-          <div key={project._id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-                <p className="text-gray-600 mt-1">{project.description}</p>
+        {(projects || []).map(project => {
+          const calculatedPassRate = calculateProjectPassRate(project._id);
+          const calculatedTestCaseCount = calculateProjectTestCaseCount(project._id);
+          const projectTestRuns = (testRuns || []).filter(tr => tr.projectId === project._id);
+          const lastTestRun = projectTestRuns.length > 0 ? 
+            projectTestRuns.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0] : null;
+          
+          return (
+            <div key={project._id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+                  <p className="text-gray-600 mt-1">{project.description}</p>
+                </div>
+                <StatusBadge status={project.status || 'active'} />
               </div>
-              <StatusBadge status={project.status || 'active'} />
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-600">Test Cases</p>
+                  <p className="text-2xl font-bold text-gray-900">{calculatedTestCaseCount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Pass Rate</p>
+                  <p className="text-2xl font-bold text-green-600">{calculatedPassRate}%</p>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">Team Members</p>
+                <div className="flex gap-2">
+                  {(project.team || []).map((member, idx) => (
+                    <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
+                      {member}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  Last run: {lastTestRun ? lastTestRun.startDate : 'Never'}
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    className="text-blue-600 hover:text-blue-800"
+                    onClick={() => handleViewItem(project, 'project')}
+                    title="View Project"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button 
+                    className="text-gray-600 hover:text-gray-800"
+                    onClick={() => handleEditItem(project, 'project')}
+                    title="Edit Project"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button 
+                    className="text-red-600 hover:text-red-800"
+                    onClick={() => handleDeleteItem(project, 'project')}
+                    title="Delete Project"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-sm text-gray-600">Test Cases</p>
-                <p className="text-2xl font-bold text-gray-900">{project.testCases || 0}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Pass Rate</p>
-                <p className="text-2xl font-bold text-green-600">{project.passRate || 0}%</p>
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Team Members</p>
-              <div className="flex gap-2">
-                {(project.team || []).map((member, idx) => (
-                  <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
-                    {member}
-                  </span>
-                ))}
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-600">Last run: {project.lastRun || 'Never'}</p>
-              <div className="flex gap-2">
-                <button 
-                  className="text-blue-600 hover:text-blue-800"
-                  onClick={() => handleViewItem(project, 'project')}
-                  title="View Project"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button 
-                  className="text-gray-600 hover:text-gray-800"
-                  onClick={() => handleEditItem(project, 'project')}
-                  title="Edit Project"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button 
-                  className="text-red-600 hover:text-red-800"
-                  onClick={() => handleDeleteItem(project, 'project')}
-                  title="Delete Project"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       {(!projects || projects.length === 0) && (
@@ -1511,13 +1299,14 @@ const TestManagerPortal = () => {
                 {(projects || []).map(project => {
                   const projectTestPlans = (testPlans || []).filter(tp => tp.projectId === project._id);
                   const projectTestRuns = (testRuns || []).filter(tr => tr.projectId === project._id);
+                  const calculatedPassRate = calculateProjectPassRate(project._id);
                   
                   return (
                     <tr key={project._id}>
                       <td className="px-4 py-2 text-sm font-medium text-gray-900">{project.name}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">{projectTestPlans.length}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">{projectTestRuns.length}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{project.passRate || 0}%</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{calculatedPassRate}%</td>
                       <td className="px-4 py-2"><StatusBadge status={project.status || 'active'} /></td>
                     </tr>
                   );
@@ -1634,7 +1423,25 @@ const TestManagerPortal = () => {
           </nav>
         </div>
 
-        {activeTab === 'dashboard' && renderDashboard()}
+        {/* Use new Dashboard component */}
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            dashboardStats={dashboardStats}
+            projects={projects}
+            testCases={testCases}
+            testRuns={testRuns}
+            testPlans={testPlans}
+            setActiveTab={setActiveTab}
+            handleCreateProject={handleCreateProject}
+            handleCreateTestCase={handleCreateTestCase}
+            handleRunTest={handleRunTest}
+            setShowAIModal={setShowAIModal}
+            setAiTask={setAiTask}
+            calculateProjectPassRate={calculateProjectPassRate}
+            calculateProjectTestCaseCount={calculateProjectTestCaseCount}
+          />
+        )}
+        
         {activeTab === 'projects' && renderProjects()}
         {activeTab === 'testcases' && renderTestCases()}
         {activeTab === 'testplans' && renderTestPlans()}
@@ -1767,158 +1574,22 @@ const TestManagerPortal = () => {
         </div>
       )}
 
-      {/* Test Case Modal */}
-      {showTestCaseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={leftAlignStyle}>
-            <h3 className="text-lg font-semibold mb-4" style={leftAlignStyle}>
-              {editingItem ? 'Edit Test Case' : 'Create New Test Case'}
-            </h3>
-            
-            <div className="space-y-4" style={leftAlignStyle}>
-              <div style={leftAlignStyle}>
-                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Case Title</label>
-                <input
-                  type="text"
-                  value={testCaseForm.title}
-                  onChange={(e) => setTestCaseForm({...testCaseForm, title: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter test case title"
-                  style={leftAlignStyle}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={leftAlignStyle}>
-                <div style={leftAlignStyle}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Project</label>
-                  <select
-                    value={testCaseForm.project}
-                    onChange={(e) => setTestCaseForm({...testCaseForm, project: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={leftAlignStyle}
-                  >
-                    {(projects || []).map(project => (
-                      <option key={project._id} value={project.name} style={leftAlignStyle}>{project.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={leftAlignStyle}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Priority</label>
-                  <select
-                    value={testCaseForm.priority}
-                    onChange={(e) => setTestCaseForm({...testCaseForm, priority: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={leftAlignStyle}
-                  >
-                    <option value="Low" style={leftAlignStyle}>Low</option>
-                    <option value="Medium" style={leftAlignStyle}>Medium</option>
-                    <option value="High" style={leftAlignStyle}>High</option>
-                    <option value="Critical" style={leftAlignStyle}>Critical</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={leftAlignStyle}>
-                <label className="block text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Description</label>
-                <textarea
-                  value={testCaseForm.description}
-                  onChange={(e) => setTestCaseForm({...testCaseForm, description: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Describe the test case"
-                  rows="3"
-                  style={leftAlignStyle}
-                />
-              </div>
-
-              {/* Test Steps Section */}
-              <div style={leftAlignStyle}>
-                <div className="flex justify-between items-center mb-3" style={leftAlignStyle}>
-                  <label className="block text-sm font-medium text-gray-700" style={leftAlignStyle}>Test Steps</label>
-                  <button
-                    type="button"
-                    onClick={addTestStep}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center gap-1"
-                    style={leftAlignStyle}
-                  >
-                    <Plus className="w-3 h-3" />
-                    Add Step
-                  </button>
-                </div>
-                
-                <div className="space-y-3 max-h-60 overflow-y-auto" style={leftAlignStyle}>
-                  {(testCaseForm.steps || []).map((step, index) => (
-                    <div key={index} className="border rounded-lg p-3 bg-gray-50" style={leftAlignStyle}>
-                      <div className="flex justify-between items-center mb-2" style={leftAlignStyle}>
-                        <span className="text-sm font-medium text-gray-700" style={leftAlignStyle}>Step {index + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTestStep(index)}
-                          className="text-red-600 hover:text-red-800"
-                          style={leftAlignStyle}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="space-y-2" style={leftAlignStyle}>
-                        <div style={leftAlignStyle}>
-                          <label className="block text-xs font-medium text-gray-600 mb-1" style={leftAlignStyle}>Action</label>
-                          <input
-                            type="text"
-                            value={step.step || ''}
-                            onChange={(e) => updateTestStep(index, 'step', e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Describe the action to perform"
-                            style={leftAlignStyle}
-                          />
-                        </div>
-                        <div style={leftAlignStyle}>
-                          <label className="block text-xs font-medium text-gray-600 mb-1" style={leftAlignStyle}>Expected Result</label>
-                          <input
-                            type="text"
-                            value={step.expectedResult || ''}
-                            onChange={(e) => updateTestStep(index, 'expectedResult', e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Describe the expected outcome"
-                            style={leftAlignStyle}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {(!testCaseForm.steps || testCaseForm.steps.length === 0) && (
-                    <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg" style={leftAlignStyle}>
-                      <p className="text-sm" style={leftAlignStyle}>No test steps added yet</p>
-                      <p className="text-xs text-gray-400" style={leftAlignStyle}>Click "Add Step" to create your first test step</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6" style={leftAlignStyle}>
-              <button
-                onClick={() => {
-                  setShowTestCaseModal(false);
-                  setEditingItem(null);
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                style={leftAlignStyle}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTestCaseSubmit}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                style={leftAlignStyle}
-              >
-                {editingItem ? 'Update Test Case' : 'Create Test Case'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Use new TestCaseModal component */}
+      <TestCaseModal
+        show={showTestCaseModal}
+        onClose={() => {
+          setShowTestCaseModal(false);
+          setEditingItem(null);
+        }}
+        testCaseForm={testCaseForm}
+        setTestCaseForm={setTestCaseForm}
+        projects={projects}
+        editingItem={editingItem}
+        onSubmit={handleTestCaseSubmit}
+        addTestStep={addTestStep}
+        updateTestStep={updateTestStep}
+        removeTestStep={removeTestStep}
+      />
 
       {/* Test Plan Modal */}
       {showTestPlanModal && (
@@ -2165,154 +1836,14 @@ const TestManagerPortal = () => {
         </div>
       )}
 
-      {/* Test Execution Modal */}
-      {showTestExecutionModal && executingTestRun && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" style={leftAlignStyle}>
-            <div className="flex justify-between items-center mb-4" style={leftAlignStyle}>
-              <h3 className="text-lg font-semibold" style={leftAlignStyle}>
-                Execute Test Run: {executingTestRun.name}
-              </h3>
-              <button
-                onClick={() => setShowTestExecutionModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-                style={leftAlignStyle}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="mb-6" style={leftAlignStyle}>
-              <div className="grid grid-cols-4 gap-4 text-center" style={leftAlignStyle}>
-                <div className="bg-blue-50 p-3 rounded">
-                  <p className="text-lg font-bold text-blue-600">{executingTestRun.totalTests}</p>
-                  <p className="text-xs text-blue-600">Total</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded">
-                  <p className="text-lg font-bold text-green-600">{executingTestRun.passedTests}</p>
-                  <p className="text-xs text-green-600">Passed</p>
-                </div>
-                <div className="bg-red-50 p-3 rounded">
-                  <p className="text-lg font-bold text-red-600">{executingTestRun.failedTests}</p>
-                  <p className="text-xs text-red-600">Failed</p>
-                </div>
-                <div className="bg-yellow-50 p-3 rounded">
-                  <p className="text-lg font-bold text-yellow-600">{executingTestRun.skippedTests}</p>
-                  <p className="text-xs text-yellow-600">Skipped</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4" style={leftAlignStyle}>
-              {executingTestRun.testCaseResults.map((result, index) => {
-                const testCase = (testCases || []).find(tc => tc._id === result.testCaseId);
-                if (!testCase) return null;
-
-                return (
-                  <div key={result.testCaseId} className="border rounded-lg p-4 bg-gray-50" style={leftAlignStyle}>
-                    <div className="flex justify-between items-start mb-3" style={leftAlignStyle}>
-                      <div style={leftAlignStyle}>
-                        <h4 className="font-medium text-gray-900" style={leftAlignStyle}>
-                          {index + 1}. {testCase.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1" style={leftAlignStyle}>
-                          {testCase.description}
-                        </p>
-                      </div>
-                      <div className="flex gap-2" style={leftAlignStyle}>
-                        <StatusBadge status={result.status} />
-                        <PriorityBadge priority={testCase.priority} />
-                      </div>
-                    </div>
-
-                    {testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0 && (
-                      <div className="mb-3" style={leftAlignStyle}>
-                        <p className="text-sm font-medium text-gray-700 mb-2" style={leftAlignStyle}>Test Steps:</p>
-                        <div className="space-y-2" style={leftAlignStyle}>
-                          {testCase.steps.map((step, stepIndex) => (
-                            <div key={stepIndex} className="bg-white p-2 rounded border-l-4 border-blue-200" style={leftAlignStyle}>
-                              <p className="text-sm" style={leftAlignStyle}>
-                                <span className="font-medium" style={leftAlignStyle}>Step {stepIndex + 1}:</span> {step.step}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1" style={leftAlignStyle}>
-                                <span className="font-medium" style={leftAlignStyle}>Expected:</span> {step.expectedResult}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {(!testCase.steps || !Array.isArray(testCase.steps) || testCase.steps.length === 0) && (
-                      <div className="mb-3 text-center py-3 text-gray-500 bg-yellow-50 rounded border" style={leftAlignStyle}>
-                        <p className="text-sm" style={leftAlignStyle}>No test steps defined for this test case</p>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center" style={leftAlignStyle}>
-                      <div className="flex gap-2" style={leftAlignStyle}>
-                        <button
-                          onClick={() => handleUpdateTestResult(result.testCaseId, 'passed')}
-                          className={`px-3 py-1 rounded text-sm ${
-                            result.status === 'passed' 
-                              ? 'bg-green-600 text-white' 
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                          style={leftAlignStyle}
-                        >
-                          Pass
-                        </button>
-                        <button
-                          onClick={() => handleUpdateTestResult(result.testCaseId, 'failed')}
-                          className={`px-3 py-1 rounded text-sm ${
-                            result.status === 'failed' 
-                              ? 'bg-red-600 text-white' 
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                          style={leftAlignStyle}
-                        >
-                          Fail
-                        </button>
-                        <button
-                          onClick={() => handleUpdateTestResult(result.testCaseId, 'skipped')}
-                          className={`px-3 py-1 rounded text-sm ${
-                            result.status === 'skipped' 
-                              ? 'bg-yellow-600 text-white' 
-                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                          }`}
-                          style={leftAlignStyle}
-                        >
-                          Skip
-                        </button>
-                      </div>
-                      <div className="flex-1 ml-4" style={leftAlignStyle}>
-                        <input
-                          type="text"
-                          value={result.notes}
-                          onChange={(e) => handleUpdateTestResult(result.testCaseId, result.status, e.target.value)}
-                          placeholder="Add notes (optional)"
-                          className="w-full px-3 py-1 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          style={leftAlignStyle}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            <div className="flex justify-end mt-6" style={leftAlignStyle}>
-              <button
-                onClick={() => setShowTestExecutionModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                style={leftAlignStyle}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Use new TestExecutionModal component */}
+      <TestExecutionModal
+        show={showTestExecutionModal}
+        onClose={() => setShowTestExecutionModal(false)}
+        executingTestRun={executingTestRun}
+        testCases={testCases}
+        handleUpdateTestResult={handleUpdateTestResult}
+      />
     </div>
   );
 };
