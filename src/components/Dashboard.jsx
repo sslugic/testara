@@ -4,11 +4,11 @@ import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 
 const Dashboard = ({ 
-  dashboardStats, 
-  projects, 
-  testCases, 
-  testRuns,
-  testPlans,
+  dashboardStats = {}, 
+  projects = [], 
+  testCases = [], 
+  testRuns = [],
+  testPlans = [],
   setActiveTab, 
   handleCreateProject, 
   handleCreateTestCase, 
@@ -16,23 +16,79 @@ const Dashboard = ({
   setShowAIModal,
   setAiTask,
   calculateProjectPassRate,
-  calculateProjectTestCaseCount
+  calculateProjectTestCaseCount,
+  onGenerateTestData
 }) => {
+  // Provide default values to prevent undefined errors
+  const stats = {
+    totalProjects: 0,
+    totalTestCases: 0,
+    passedTests: 0,
+    failedTests: 0,
+    avgPassRate: 0,
+    ...dashboardStats
+  };
+
+  // Check if we should show the generate button - show if no data OR for testing
+  const showGenerateButton = projects.length === 0 && testCases.length === 0;
+  
+  // Debug logging
+  console.log('Dashboard render:', {
+    projectsLength: projects.length,
+    testCasesLength: testCases.length,
+    showGenerateButton,
+    localStorage: {
+      projects: localStorage.getItem('testara_projects') ? JSON.parse(localStorage.getItem('testara_projects')).length : 0,
+      testCases: localStorage.getItem('testara_testCases') ? JSON.parse(localStorage.getItem('testara_testCases')).length : 0
+    }
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <button
-          onClick={() => { 
-            setShowAIModal(true); 
-            setAiTask('project'); 
-          }}
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
-        >
-          <Bot className="w-4 h-4" />
-          AI Generate
-        </button>
+        <div className="flex gap-2">
+          {showGenerateButton && (
+            <button
+              onClick={() => {
+                console.log('Generate Test Data button clicked from Dashboard');
+                if (onGenerateTestData) {
+                  onGenerateTestData();
+                }
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              Generate Test Data
+            </button>
+          )}
+          {/* Debug button - remove this after testing */}
+          {projects.length > 0 && (
+            <button
+              onClick={() => {
+                if (window.confirm('Clear all data and regenerate?')) {
+                  localStorage.clear();
+                  window.location.reload();
+                }
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              Reset Data
+            </button>
+          )}
+          <button
+            onClick={() => { 
+              setShowAIModal(true); 
+              setAiTask('project'); 
+            }}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
+          >
+            <Bot className="w-4 h-4" />
+            AI Generate
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -41,7 +97,7 @@ const Dashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalProjects}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalProjects}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
               <Target className="w-8 h-8 text-blue-600" />
@@ -53,7 +109,7 @@ const Dashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Test Cases</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{dashboardStats.totalTestCases}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalTestCases}</p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <FileText className="w-8 h-8 text-green-600" />
@@ -65,7 +121,7 @@ const Dashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Passed Tests</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{dashboardStats.passedTests}</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{stats.passedTests}</p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <CheckCircle className="w-8 h-8 text-green-600" />
@@ -77,7 +133,7 @@ const Dashboard = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Failed Tests</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">{dashboardStats.failedTests}</p>
+              <p className="text-3xl font-bold text-red-600 mt-1">{stats.failedTests}</p>
             </div>
             <div className="bg-red-100 p-3 rounded-lg">
               <XCircle className="w-8 h-8 text-red-600" />
@@ -100,10 +156,10 @@ const Dashboard = ({
             </button>
           </div>
           <div className="space-y-4">
-            {(projects || []).slice(0, 4).map(project => {
+            {projects.slice(0, 4).map(project => {
               const calculatedPassRate = calculateProjectPassRate ? calculateProjectPassRate(project._id) : 0;
               const calculatedTestCaseCount = calculateProjectTestCaseCount ? calculateProjectTestCaseCount(project._id) : 0;
-              const projectTestRuns = (testRuns || []).filter(tr => tr.projectId === project._id);
+              const projectTestRuns = testRuns.filter(tr => tr.projectId === project._id);
               const lastTestRun = projectTestRuns.length > 0 ? 
                 projectTestRuns.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0] : null;
               
@@ -125,7 +181,7 @@ const Dashboard = ({
                 </div>
               );
             })}
-            {(!projects || projects.length === 0) && (
+            {projects.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p>No projects created yet</p>
@@ -149,14 +205,14 @@ const Dashboard = ({
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span className="text-sm text-gray-600">Passed</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{dashboardStats.passedTests}</span>
+              <span className="text-sm font-medium text-gray-900">{stats.passedTests}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <span className="text-sm text-gray-600">Failed</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{dashboardStats.failedTests}</span>
+              <span className="text-sm font-medium text-gray-900">{stats.failedTests}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -164,7 +220,7 @@ const Dashboard = ({
                 <span className="text-sm text-gray-600">Pending</span>
               </div>
               <span className="text-sm font-medium text-gray-900">
-                {(testCases || []).filter(tc => tc.status === 'pending').length}
+                {testCases.filter(tc => tc.status === 'pending').length}
               </span>
             </div>
             
@@ -172,12 +228,12 @@ const Dashboard = ({
             <div className="mt-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600">Overall Pass Rate</span>
-                <span className="text-lg font-bold text-gray-900">{dashboardStats.avgPassRate}%</span>
+                <span className="text-lg font-bold text-gray-900">{stats.avgPassRate}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-green-500 h-3 rounded-full transition-all duration-300" 
-                  style={{ width: `${dashboardStats.avgPassRate}%` }}
+                  style={{ width: `${stats.avgPassRate}%` }}
                 ></div>
               </div>
             </div>
@@ -208,7 +264,7 @@ const Dashboard = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {(testCases || []).slice(0, 5).map(testCase => (
+              {testCases.slice(0, 5).map(testCase => (
                 <tr key={testCase._id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{testCase.title}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{testCase.project}</td>

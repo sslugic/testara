@@ -25,6 +25,7 @@ import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import TestCaseModal from './modals/TestCaseModal';
 import TestExecutionModal from './modals/TestExecutionModal';
+import SettingsModal from './modals/SettingsModal';
 
 const TestManagerPortal = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -94,11 +95,293 @@ const TestManagerPortal = () => {
   const [showTestExecutionModal, setShowTestExecutionModal] = useState(false);
   const [executingTestRun, setExecutingTestRun] = useState(null);
 
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [users, setUsers] = useState([
+    {
+      id: '1',
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      role: 'Test Manager',
+      status: 'active'
+    },
+    {
+      id: '2',
+      name: 'Jane Smith',
+      email: 'jane.smith@example.com',
+      role: 'Tester',
+      status: 'active'
+    },
+    {
+      id: '3',
+      name: 'Bob Wilson',
+      email: 'bob.wilson@example.com',
+      role: 'Developer',
+      status: 'inactive'
+    }
+  ]);
+
   useEffect(() => {
     loadAllData();
   }, []);
 
+  const generateMockData = () => {
+    console.log('Starting mock data generation...');
+    
+    // Generate 8 projects
+    const mockProjects = [
+      {
+        _id: 'proj_1',
+        name: 'E-Commerce Platform',
+        description: 'Main e-commerce website testing project',
+        status: 'active',
+        team: ['Alice Johnson', 'Bob Smith', 'Carol Davis']
+      },
+      {
+        _id: 'proj_2',
+        name: 'Mobile Banking App',
+        description: 'Mobile banking application testing',
+        status: 'active',
+        team: ['David Wilson', 'Eva Brown', 'Frank Miller']
+      },
+      {
+        _id: 'proj_3',
+        name: 'Customer Portal',
+        description: 'Customer self-service portal',
+        status: 'active',
+        team: ['Grace Lee', 'Henry Garcia', 'Ivy Rodriguez']
+      },
+      {
+        _id: 'proj_4',
+        name: 'Admin Dashboard',
+        description: 'Administrative dashboard and reporting',
+        status: 'active',
+        team: ['Jack Taylor', 'Kate Anderson', 'Leo Martinez']
+      },
+      {
+        _id: 'proj_5',
+        name: 'API Gateway',
+        description: 'Backend API testing and validation',
+        status: 'active',
+        team: ['Maya Patel', 'Noah Thompson', 'Olivia White']
+      },
+      {
+        _id: 'proj_6',
+        name: 'Social Media Integration',
+        description: 'Social media platform integrations',
+        status: 'completed',
+        team: ['Paul Harris', 'Quinn Clark', 'Ruby Lewis']
+      },
+      {
+        _id: 'proj_7',
+        name: 'Payment Gateway',
+        description: 'Payment processing system',
+        status: 'active',
+        team: ['Sam Walker', 'Tina Hall', 'Uma Young']
+      },
+      {
+        _id: 'proj_8',
+        name: 'Notification System',
+        description: 'Email and SMS notification service',
+        status: 'active',
+        team: ['Victor King', 'Wendy Scott', 'Xavier Green']
+      }
+    ];
+
+    // Generate 35 test cases
+    const testCaseTemplates = [
+      { title: 'User Registration', description: 'Test user account creation process', category: 'Functional' },
+      { title: 'User Login', description: 'Test user authentication and login', category: 'Functional' },
+      { title: 'Password Reset', description: 'Test password recovery functionality', category: 'Functional' },
+      { title: 'Profile Update', description: 'Test user profile modification', category: 'Functional' },
+      { title: 'Product Search', description: 'Test product search functionality', category: 'Functional' },
+      { title: 'Shopping Cart Add', description: 'Test adding items to cart', category: 'Functional' },
+      { title: 'Shopping Cart Remove', description: 'Test removing items from cart', category: 'Functional' },
+      { title: 'Checkout Process', description: 'Test complete checkout workflow', category: 'Functional' },
+      { title: 'Payment Processing', description: 'Test payment gateway integration', category: 'Functional' },
+      { title: 'Order Confirmation', description: 'Test order confirmation email', category: 'Functional' },
+      { title: 'Load Testing Homepage', description: 'Test homepage under high load', category: 'Performance' },
+      { title: 'SQL Injection Security', description: 'Test for SQL injection vulnerabilities', category: 'Security' },
+      { title: 'Cross-Site Scripting', description: 'Test XSS vulnerability protection', category: 'Security' },
+      { title: 'Mobile Responsiveness', description: 'Test mobile device compatibility', category: 'UI/UX' },
+      { title: 'Browser Compatibility', description: 'Test across different browsers', category: 'Compatibility' },
+      { title: 'API Authentication', description: 'Test API key authentication', category: 'API' },
+      { title: 'API Rate Limiting', description: 'Test API rate limiting functionality', category: 'API' },
+      { title: 'Database Backup', description: 'Test automated database backup', category: 'System' },
+      { title: 'Error Handling', description: 'Test application error handling', category: 'Functional' },
+      { title: 'Session Management', description: 'Test user session handling', category: 'Functional' },
+      { title: 'File Upload', description: 'Test file upload functionality', category: 'Functional' },
+      { title: 'Email Notifications', description: 'Test email notification system', category: 'Integration' },
+      { title: 'SMS Notifications', description: 'Test SMS notification delivery', category: 'Integration' },
+      { title: 'Social Media Login', description: 'Test OAuth social media login', category: 'Integration' },
+      { title: 'Inventory Management', description: 'Test inventory tracking system', category: 'Functional' },
+      { title: 'Reporting Dashboard', description: 'Test admin reporting features', category: 'Functional' },
+      { title: 'User Permissions', description: 'Test role-based access control', category: 'Security' },
+      { title: 'Data Export', description: 'Test data export functionality', category: 'Functional' },
+      { title: 'Data Import', description: 'Test bulk data import process', category: 'Functional' },
+      { title: 'Currency Conversion', description: 'Test multi-currency support', category: 'Functional' },
+      { title: 'Language Localization', description: 'Test multi-language support', category: 'Localization' },
+      { title: 'Cache Performance', description: 'Test caching mechanism efficiency', category: 'Performance' },
+      { title: 'Memory Usage', description: 'Test application memory consumption', category: 'Performance' },
+      { title: 'Network Connectivity', description: 'Test offline/online behavior', category: 'Network' },
+      { title: 'Third-party Integration', description: 'Test external service integration', category: 'Integration' }
+    ];
+
+    const priorities = ['Low', 'Medium', 'High', 'Critical'];
+    const statuses = ['pending', 'passed', 'failed'];
+
+    const mockTestCases = testCaseTemplates.map((template, index) => {
+      const projectIndex = index % mockProjects.length;
+      const project = mockProjects[projectIndex];
+      
+      return {
+        _id: `tc_${index + 1}`,
+        title: template.title,
+        description: template.description,
+        project: project.name,
+        priority: priorities[Math.floor(Math.random() * priorities.length)],
+        category: template.category,
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        lastRun: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        steps: [
+          {
+            step: `Navigate to ${template.title.toLowerCase()} page`,
+            expectedResult: `${template.title} page loads successfully`
+          },
+          {
+            step: `Perform ${template.title.toLowerCase()} action`,
+            expectedResult: `${template.title} completes successfully`
+          },
+          {
+            step: `Verify ${template.title.toLowerCase()} result`,
+            expectedResult: `Expected ${template.title.toLowerCase()} outcome is displayed`
+          }
+        ]
+      };
+    });
+
+    // Generate test plans
+    const mockTestPlans = [
+      {
+        _id: 'tp_1',
+        name: 'E-Commerce Regression Test Plan',
+        description: 'Comprehensive regression testing for e-commerce platform',
+        projectId: 'proj_1',
+        status: 'active',
+        createdDate: '2024-01-15',
+        testCases: mockTestCases.filter(tc => tc.project === 'E-Commerce Platform').slice(0, 4).map(tc => tc._id),
+        strategy: {
+          objectives: ['Test core e-commerce functionality', 'Ensure payment processing works'],
+          scope: 'Full e-commerce workflow testing',
+          approach: 'Manual and automated testing combination',
+          resources: 'QA team with e-commerce domain knowledge',
+          timeline: '3 weeks',
+          deliverables: ['Test execution report', 'Bug report', 'Performance metrics']
+        }
+      },
+      {
+        _id: 'tp_2',
+        name: 'Mobile Banking Security Test Plan',
+        description: 'Security focused testing for mobile banking app',
+        projectId: 'proj_2',
+        status: 'active',
+        createdDate: '2024-01-20',
+        testCases: mockTestCases.filter(tc => tc.project === 'Mobile Banking App').slice(0, 3).map(tc => tc._id),
+        strategy: {
+          objectives: ['Validate security measures', 'Test authentication flows'],
+          scope: 'Security and authentication testing',
+          approach: 'Security-first testing methodology',
+          resources: 'Security testing specialists',
+          timeline: '2 weeks',
+          deliverables: ['Security assessment report', 'Vulnerability analysis']
+        }
+      }
+    ];
+
+    // Generate test runs
+    const mockTestRuns = [
+      {
+        _id: 'tr_1',
+        name: 'E-Commerce Sprint 1 Test Run',
+        description: 'Testing for sprint 1 e-commerce features',
+        projectId: 'proj_1',
+        testPlanId: 'tp_1',
+        status: 'completed',
+        startDate: '2024-02-01',
+        endDate: '2024-02-05',
+        executedBy: 'Alice Johnson',
+        totalTests: 4,
+        passedTests: 3,
+        failedTests: 1,
+        skippedTests: 0,
+        testCaseResults: mockTestCases.filter(tc => tc.project === 'E-Commerce Platform').slice(0, 4).map((tc, idx) => ({
+          testCaseId: tc._id,
+          status: idx === 1 ? 'failed' : 'passed',
+          executedDate: '2024-02-03',
+          notes: idx === 1 ? 'Payment gateway timeout issue' : 'Test completed successfully'
+        }))
+      },
+      {
+        _id: 'tr_2',
+        name: 'Mobile Banking Security Run',
+        description: 'Security testing execution for mobile banking',
+        projectId: 'proj_2',
+        testPlanId: 'tp_2',
+        status: 'in_progress',
+        startDate: '2024-02-10',
+        endDate: null,
+        executedBy: 'David Wilson',
+        totalTests: 3,
+        passedTests: 2,
+        failedTests: 0,
+        skippedTests: 0,
+        testCaseResults: mockTestCases.filter(tc => tc.project === 'Mobile Banking App').slice(0, 3).map((tc, idx) => ({
+          testCaseId: tc._id,
+          status: idx < 2 ? 'passed' : 'pending',
+          executedDate: idx < 2 ? '2024-02-12' : null,
+          notes: idx < 2 ? 'Security test passed' : ''
+        }))
+      }
+    ];
+
+    console.log('Generated data:', {
+      projects: mockProjects.length,
+      testCases: mockTestCases.length,
+      testPlans: mockTestPlans.length,
+      testRuns: mockTestRuns.length
+    });
+
+    // Save to localStorage for persistence
+    try {
+      localStorage.setItem('testara_projects', JSON.stringify(mockProjects));
+      localStorage.setItem('testara_testCases', JSON.stringify(mockTestCases));
+      localStorage.setItem('testara_testPlans', JSON.stringify(mockTestPlans));
+      localStorage.setItem('testara_testRuns', JSON.stringify(mockTestRuns));
+      console.log('Mock data saved to localStorage successfully');
+      
+      // Verify localStorage save
+      console.log('localStorage verification:', {
+        projects: localStorage.getItem('testara_projects') ? JSON.parse(localStorage.getItem('testara_projects')).length : 0,
+        testCases: localStorage.getItem('testara_testCases') ? JSON.parse(localStorage.getItem('testara_testCases')).length : 0
+      });
+      
+    } catch (error) {
+      console.error('Failed to save mock data to localStorage:', error);
+    }
+
+    // Update component state
+    setProjects(mockProjects);
+    setTestCases(mockTestCases);
+    setTestPlans(mockTestPlans);
+    setTestRuns(mockTestRuns);
+    setError(null);
+    setLoading(false);
+    
+    console.log('Mock data generation complete, state updated');
+  };
+
   const loadAllData = async () => {
+    setLoading(true);
+    
     try {
       const [projectsData, testCasesData, testPlansData, testRunsData] = await Promise.all([
         ApiService.getProjects(),
@@ -107,18 +390,73 @@ const TestManagerPortal = () => {
         ApiService.getTestRuns()
       ]);
 
-      setProjects(projectsData || []);
-      setTestCases(testCasesData || []);
-      setTestPlans(testPlansData || []);
-      setTestRuns(testRunsData || []);
-      setError(null);
+      // Check if we have any real data from API
+      const hasApiData = (projectsData && projectsData.length > 0) || 
+                        (testCasesData && testCasesData.length > 0);
+
+      if (hasApiData) {
+        console.log('Loading data from API...');
+        setProjects(projectsData || []);
+        setTestCases(testCasesData || []);
+        setTestPlans(testPlansData || []);
+        setTestRuns(testRunsData || []);
+        setError(null);
+      } else {
+        // No API data, check localStorage
+        console.log('No API data found, checking localStorage...');
+        
+        const storedProjects = localStorage.getItem('testara_projects');
+        const storedTestCases = localStorage.getItem('testara_testCases');
+        const storedTestPlans = localStorage.getItem('testara_testPlans');
+        const storedTestRuns = localStorage.getItem('testara_testRuns');
+
+        const hasStoredData = storedProjects && storedTestCases && 
+                             JSON.parse(storedProjects).length > 0 && 
+                             JSON.parse(storedTestCases).length > 0;
+
+        if (hasStoredData) {
+          console.log('Loading data from localStorage...');
+          setProjects(JSON.parse(storedProjects));
+          setTestCases(JSON.parse(storedTestCases));
+          setTestPlans(storedTestPlans ? JSON.parse(storedTestPlans) : []);
+          setTestRuns(storedTestRuns ? JSON.parse(storedTestRuns) : []);
+          setError(null);
+        } else {
+          console.log('No data found anywhere, generating mock data...');
+          generateMockData();
+          return; // generateMockData sets loading to false
+        }
+      }
     } catch (err) {
-      console.error('Error loading data:', err);
-      setError('Failed to load data: ' + err.message);
-      setProjects([]);
-      setTestCases([]);
-      setTestPlans([]);
-      setTestRuns([]);
+      console.error('Error loading data from API:', err);
+      
+      // API failed, try localStorage as fallback
+      try {
+        const storedProjects = localStorage.getItem('testara_projects');
+        const storedTestCases = localStorage.getItem('testara_testCases');
+        
+        const hasStoredData = storedProjects && storedTestCases && 
+                             JSON.parse(storedProjects).length > 0 && 
+                             JSON.parse(storedTestCases).length > 0;
+        
+        if (hasStoredData) {
+          console.log('API failed, loading from localStorage...');
+          setProjects(JSON.parse(storedProjects));
+          setTestCases(JSON.parse(storedTestCases));
+          setTestPlans(JSON.parse(localStorage.getItem('testara_testPlans') || '[]'));
+          setTestRuns(JSON.parse(localStorage.getItem('testara_testRuns') || '[]'));
+          setError(null);
+        } else {
+          console.log('API and localStorage both empty, generating mock data...');
+          generateMockData();
+          return; // generateMockData sets loading to false
+        }
+      } catch (localStorageError) {
+        console.error('localStorage also failed:', localStorageError);
+        console.log('All data sources failed, generating mock data...');
+        generateMockData();
+        return; // generateMockData sets loading to false
+      }
     } finally {
       setLoading(false);
     }
@@ -300,17 +638,21 @@ const TestManagerPortal = () => {
     if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
       try {
         if (type === 'project') {
-          await ApiService.deleteProject(item._id);
-          setProjects((projects || []).filter(p => p._id !== item._id));
+          const updatedProjects = (projects || []).filter(p => p._id !== item._id);
+          setProjects(updatedProjects);
+          localStorage.setItem('testara_projects', JSON.stringify(updatedProjects));
         } else if (type === 'testcase') {
-          await ApiService.deleteTestCase(item._id);
-          setTestCases((testCases || []).filter(tc => tc._id !== item._id));
+          const updatedTestCases = (testCases || []).filter(tc => tc._id !== item._id);
+          setTestCases(updatedTestCases);
+          localStorage.setItem('testara_testCases', JSON.stringify(updatedTestCases));
         } else if (type === 'testplan') {
-          await ApiService.deleteTestPlan(item._id);
-          setTestPlans((testPlans || []).filter(tp => tp._id !== item._id));
+          const updatedTestPlans = (testPlans || []).filter(tp => tp._id !== item._id);
+          setTestPlans(updatedTestPlans);
+          localStorage.setItem('testara_testPlans', JSON.stringify(updatedTestPlans));
         } else if (type === 'testrun') {
-          await ApiService.deleteTestRun(item._id);
-          setTestRuns((testRuns || []).filter(tr => tr._id !== item._id));
+          const updatedTestRuns = (testRuns || []).filter(tr => tr._id !== item._id);
+          setTestRuns(updatedTestRuns);
+          localStorage.setItem('testara_testRuns', JSON.stringify(updatedTestRuns));
         }
       } catch (err) {
         setError(`Failed to delete ${type}: ` + err.message);
@@ -327,17 +669,20 @@ const TestManagerPortal = () => {
         team: (projectForm.team || []).filter(member => member.trim() !== '')
       };
 
+      let updatedProjects;
       if (editingItem) {
-        const updatedProject = await ApiService.updateProject(editingItem._id, projectData);
-        setProjects((projects || []).map(p => p._id === editingItem._id ? updatedProject : p));
+        const updatedProject = { ...projectData, _id: editingItem._id };
+        updatedProjects = (projects || []).map(p => p._id === editingItem._id ? updatedProject : p);
         setEditingItem(null);
       } else {
-        const newProject = await ApiService.createProject(projectData);
-        setProjects([...(projects || []), newProject]);
+        const newProject = { ...projectData, _id: Date.now().toString() };
+        updatedProjects = [...(projects || []), newProject];
       }
+      
+      setProjects(updatedProjects);
+      localStorage.setItem('testara_projects', JSON.stringify(updatedProjects));
       setShowProjectModal(false);
       
-      // Reset form only after successful submission
       setProjectForm({
         name: '',
         description: '',
@@ -353,17 +698,20 @@ const TestManagerPortal = () => {
     if (!testCaseForm.title.trim()) return;
 
     try {
+      let updatedTestCases;
       if (editingItem) {
-        const updatedTestCase = await ApiService.updateTestCase(editingItem._id, testCaseForm);
-        setTestCases((testCases || []).map(tc => tc._id === editingItem._id ? updatedTestCase : tc));
+        const updatedTestCase = { ...testCaseForm, _id: editingItem._id };
+        updatedTestCases = (testCases || []).map(tc => tc._id === editingItem._id ? updatedTestCase : tc);
         setEditingItem(null);
       } else {
-        const newTestCase = await ApiService.createTestCase(testCaseForm);
-        setTestCases([...(testCases || []), newTestCase]);
+        const newTestCase = { ...testCaseForm, _id: Date.now().toString() };
+        updatedTestCases = [...(testCases || []), newTestCase];
       }
+      
+      setTestCases(updatedTestCases);
+      localStorage.setItem('testara_testCases', JSON.stringify(updatedTestCases));
       setShowTestCaseModal(false);
       
-      // Reset form only after successful submission
       setTestCaseForm({
         title: '',
         description: '',
@@ -392,17 +740,20 @@ const TestManagerPortal = () => {
         }
       };
 
+      let updatedTestPlans;
       if (editingItem) {
-        const updatedTestPlan = await ApiService.updateTestPlan(editingItem._id, testPlanData);
-        setTestPlans((testPlans || []).map(tp => tp._id === editingItem._id ? updatedTestPlan : tp));
+        const updatedTestPlan = { ...testPlanData, _id: editingItem._id };
+        updatedTestPlans = (testPlans || []).map(tp => tp._id === editingItem._id ? updatedTestPlan : tp);
         setEditingItem(null);
       } else {
-        const newTestPlan = await ApiService.createTestPlan(testPlanData);
-        setTestPlans([...(testPlans || []), newTestPlan]);
+        const newTestPlan = { ...testPlanData, _id: Date.now().toString() };
+        updatedTestPlans = [...(testPlans || []), newTestPlan];
       }
+      
+      setTestPlans(updatedTestPlans);
+      localStorage.setItem('testara_testPlans', JSON.stringify(updatedTestPlans));
       setShowTestPlanModal(false);
       
-      // Reset form only after successful submission
       setTestPlanForm({
         name: '',
         description: '',
@@ -467,17 +818,20 @@ const TestManagerPortal = () => {
         skippedTests: editingItem ? editingItem.skippedTests : 0
       };
 
+      let updatedTestRuns;
       if (editingItem) {
-        const updatedTestRun = await ApiService.updateTestRun(editingItem._id, testRunData);
-        setTestRuns((testRuns || []).map(tr => tr._id === editingItem._id ? updatedTestRun : tr));
+        const updatedTestRun = { ...testRunData, _id: editingItem._id };
+        updatedTestRuns = (testRuns || []).map(tr => tr._id === updatedTestRun._id ? updatedTestRun : tr);
         setEditingItem(null);
       } else {
-        const newTestRun = await ApiService.createTestRun(testRunData);
-        setTestRuns([...(testRuns || []), newTestRun]);
+        const newTestRun = { ...testRunData, _id: Date.now().toString() };
+        updatedTestRuns = [...(testRuns || []), newTestRun];
       }
+      
+      setTestRuns(updatedTestRuns);
+      localStorage.setItem('testara_testRuns', JSON.stringify(updatedTestRuns));
       setShowTestRunModal(false);
       
-      // Reset form only after successful submission
       setTestRunForm({
         name: '',
         description: '',
@@ -515,7 +869,9 @@ const TestManagerPortal = () => {
         lastRun: new Date().toISOString().split('T')[0],
         team: ['AI Assistant', 'Test Lead']
       };
-      setProjects([...(projects || []), newProject]);
+      const updatedProjects = [...(projects || []), newProject];
+      setProjects(updatedProjects);
+      localStorage.setItem('testara_projects', JSON.stringify(updatedProjects));
     } else if (aiTask === 'testcase') {
       const newTestCase = {
         _id: Date.now().toString(),
@@ -545,7 +901,9 @@ const TestManagerPortal = () => {
           }
         ]
       };
-      setTestCases([...(testCases || []), newTestCase]);
+      const updatedTestCases = [...(testCases || []), newTestCase];
+      setTestCases(updatedTestCases);
+      localStorage.setItem('testara_testCases', JSON.stringify(updatedTestCases));
     } else if (aiTask === 'testplan') {
       const newTestPlan = {
         _id: Date.now().toString(),
@@ -564,7 +922,9 @@ const TestManagerPortal = () => {
           deliverables: ['Test execution report', 'Defect analysis', 'Coverage documentation']
         }
       };
-      setTestPlans([...(testPlans || []), newTestPlan]);
+      const updatedTestPlans = [...(testPlans || []), newTestPlan];
+      setTestPlans(updatedTestPlans);
+      localStorage.setItem('testara_testPlans', JSON.stringify(updatedTestPlans));
     } else if (aiTask === 'testrun') {
       const selectedProject = (projects || []).length > 0 ? (projects || [])[0] : null;
       const availableTestCases = (testCases || []).filter(tc => 
@@ -596,7 +956,9 @@ const TestManagerPortal = () => {
         failedTests: 0,
         skippedTests: 0
       };
-      setTestRuns([...(testRuns || []), newTestRun]);
+      const updatedTestRuns = [...(testRuns || []), newTestRun];
+      setTestRuns(updatedTestRuns);
+      localStorage.setItem('testara_testRuns', JSON.stringify(updatedTestRuns));
     }
     
     setIsGenerating(false);
@@ -618,6 +980,7 @@ const TestManagerPortal = () => {
       return tc;
     });
     setTestCases(updatedTestCases);
+    localStorage.setItem('testara_testCases', JSON.stringify(updatedTestCases));
   };
 
   const handleExecuteTestPlan = (testPlan) => {
@@ -653,7 +1016,9 @@ const TestManagerPortal = () => {
       failedTests: 0,
       skippedTests: 0
     };
-    setTestRuns([...(testRuns || []), newTestRun]);
+    const updatedTestRuns = [...(testRuns || []), newTestRun];
+    setTestRuns(updatedTestRuns);
+    localStorage.setItem('testara_testRuns', JSON.stringify(updatedTestRuns));
     alert('Test plan execution started! Check Test Runs tab.');
   };
 
@@ -726,7 +1091,22 @@ const TestManagerPortal = () => {
     }
 
     setExecutingTestRun(updatedTestRun);
-    setTestRuns((testRuns || []).map(tr => tr._id === updatedTestRun._id ? updatedTestRun : tr));
+    const updatedTestRuns = (testRuns || []).map(tr => tr._id === updatedTestRun._id ? updatedTestRun : tr);
+    setTestRuns(updatedTestRuns);
+    localStorage.setItem('testara_testRuns', JSON.stringify(updatedTestRuns));
+  };
+
+  // User management handlers
+  const handleAddUser = (userData) => {
+    setUsers([...users, userData]);
+  };
+
+  const handleUpdateUser = (userId, userData) => {
+    setUsers(users.map(user => user.id === userId ? userData : user));
+  };
+
+  const handleDeleteUser = (userId) => {
+    setUsers(users.filter(user => user.id !== userId));
   };
 
   const renderProjects = () => (
@@ -1203,7 +1583,7 @@ const TestManagerPortal = () => {
   const renderReports = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Reports</h2>
         <button 
           onClick={handleExportReport}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -1356,12 +1736,23 @@ const TestManagerPortal = () => {
           <div className="text-sm text-gray-600 mb-4">
             <p>Application is running in localStorage mode.</p>
           </div>
-          <button 
-            onClick={loadAllData} // Change from checkServerAndLoadData to loadAllData
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retry Loading
-          </button>
+          <div className="flex gap-2 justify-center">
+            <button 
+              onClick={loadAllData}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Retry Loading
+            </button>
+            <button 
+              onClick={() => {
+                localStorage.clear();
+                generateMockData();
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            >
+              Generate Mock Data
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1382,7 +1773,10 @@ const TestManagerPortal = () => {
               <h1 className="ml-3 text-xl font-bold text-gray-900">Test Manager Portal</h1>
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-gray-600 hover:text-gray-900">
+              <button 
+                className="text-gray-600 hover:text-gray-900"
+                onClick={() => setShowSettingsModal(true)}
+              >
                 <Settings className="w-5 h-5" />
               </button>
               <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
@@ -1393,34 +1787,46 @@ const TestManagerPortal = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <nav className="flex space-x-8">
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'projects', label: 'Projects', icon: Target },
-              { id: 'testcases', label: 'Test Cases', icon: FileText },
-              { id: 'testplans', label: 'Test Plans', icon: FileText },
-              { id: 'testruns', label: 'Test Runs', icon: Play },
-              { id: 'reports', label: 'Reports', icon: BarChart3 }
-            ].map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Dashboard
+            </button>
+            <button 
+              onClick={() => setActiveTab('projects')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'projects' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Projects
+            </button>
+            <button 
+              onClick={() => setActiveTab('testcases')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'testcases' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Test Cases
+            </button>
+            <button 
+              onClick={() => setActiveTab('testplans')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'testplans' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Test Plans
+            </button>
+            <button 
+              onClick={() => setActiveTab('testruns')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'testruns' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Test Runs
+            </button>
+            <button 
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 rounded-lg ${activeTab === 'reports' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Reports
+            </button>
+          </div>
         </div>
 
         {/* Use new Dashboard component */}
@@ -1439,6 +1845,7 @@ const TestManagerPortal = () => {
             setAiTask={setAiTask}
             calculateProjectPassRate={calculateProjectPassRate}
             calculateProjectTestCaseCount={calculateProjectTestCaseCount}
+            onGenerateTestData={generateMockData}
           />
         )}
         
@@ -1843,6 +2250,17 @@ const TestManagerPortal = () => {
         executingTestRun={executingTestRun}
         testCases={testCases}
         handleUpdateTestResult={handleUpdateTestResult}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        show={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        users={users}
+        onAddUser={handleAddUser}
+        onUpdateUser={handleUpdateUser}
+        onDeleteUser={handleDeleteUser}
+        onGenerateMockData={generateMockData}
       />
     </div>
   );
